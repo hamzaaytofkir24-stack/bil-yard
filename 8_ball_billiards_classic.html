@@ -1,0 +1,3730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>8-Ball Billiards Classic</title>
+    <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800;900&family=Montserrat:wght@600;700;800;900&display=swap');
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+
+        body {
+            background-color: #557b24;
+            background-image: radial-gradient(circle at center, #67912d 0%, #46681b 100%);
+            font-family: 'Montserrat', 'Cairo', sans-serif;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Game Wrapper */
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 16px;
+        }
+
+        /* Top Bar & Menu Button */
+        #top-bar {
+            width: 100%;
+            max-width: 1200px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 20;
+            height: 44px;
+        }
+
+        #status-banner {
+            background: rgba(0, 0, 0, 0.72);
+            color: #fff;
+            padding: 6px 18px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            border: 1.5px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+            margin: 0 auto;
+            text-align: center;
+            transition: all 0.25s ease;
+        }
+
+        .icon-btn {
+            width: 48px;
+            height: 44px;
+            background: linear-gradient(180deg, #2d2d2d 0%, #111111 100%);
+            border: 2px solid #000;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.25);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            cursor: pointer;
+            transition: transform 0.1s ease;
+        }
+
+        .icon-btn:active {
+            transform: scale(0.94);
+        }
+
+        .hamburger-line {
+            width: 26px;
+            height: 4px;
+            background: linear-gradient(180deg, #f3c69f 0%, #d49664 100%);
+            border-radius: 2px;
+        }
+
+        /* Middle Play Area */
+        #table-stage {
+            position: relative;
+            flex: 1;
+            width: 100%;
+            max-width: 1240px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            min-height: 0;
+        }
+
+        #canvas-wrap {
+            position: relative;
+            flex: 1;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        canvas#poolCanvas {
+            display: block;
+            border-radius: 16px;
+            filter: drop-shadow(0 14px 26px rgba(0, 0, 0, 0.55));
+            cursor: crosshair;
+        }
+
+        /* Right Side Controls: Power Bar & Spin Selector */
+        #side-controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 18px;
+            z-index: 15;
+            padding-right: 4px;
+        }
+
+        /* Cue Ball Spin Selector */
+        #spin-widget {
+            width: 68px;
+            height: 68px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 30%, #ffffff 0%, #e0e0e0 55%, #8a8a8a 88%, #111 100%);
+            border: 4px solid #141414;
+            box-shadow: 0 6px 14px rgba(0, 0, 0, 0.6), inset 0 -4px 8px rgba(0, 0, 0, 0.35);
+            position: relative;
+            cursor: pointer;
+        }
+
+        #spin-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 35%, #ff5252, #b71c1c);
+            border: 1.5px solid #220000;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+        }
+
+        /* Interactive Power Pull Meter */
+        #power-meter-container {
+            width: 34px;
+            height: 190px;
+            background: linear-gradient(180deg, #1b1b1b 0%, #0a0a0a 100%);
+            border: 3px solid #2a180c;
+            border-radius: 17px;
+            padding: 4px;
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.55), inset 0 2px 6px rgba(0, 0, 0, 0.8);
+            position: relative;
+            cursor: ns-resize;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            overflow: hidden;
+        }
+
+        #power-fill {
+            width: 100%;
+            height: 0%;
+            background: linear-gradient(0deg, #4caf50 0%, #ffeb3b 50%, #f44336 100%);
+            border-radius: 12px;
+            transition: height 0.04s linear;
+        }
+
+        #power-cue-thumb {
+            position: absolute;
+            left: 50%;
+            top: 6px;
+            transform: translateX(-50%);
+            width: 12px;
+            height: 54px;
+            background: linear-gradient(90deg, #c98a4b, #f3c68f, #8c5323);
+            border-radius: 6px;
+            border: 1px solid #3d200a;
+            pointer-events: none;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.6);
+        }
+
+        /* Bottom HUD matching screenshot */
+        #bottom-hud {
+            width: 100%;
+            max-width: 1120px;
+            height: 68px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            z-index: 15;
+            padding-bottom: 4px;
+        }
+
+        .player-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .turn-arrow {
+            font-size: 28px;
+            line-height: 1;
+            filter: drop-shadow(0 2px 3px rgba(0,0,0,0.6));
+            transition: all 0.25s ease;
+        }
+
+        .turn-arrow.active-left {
+            color: #2ecc71;
+            transform: scale(1.12);
+        }
+
+        .turn-arrow.active-right {
+            color: #2ecc71;
+            transform: scale(1.12);
+        }
+
+        .turn-arrow.inactive {
+            color: #111111;
+            opacity: 0.75;
+        }
+
+        .avatar-box {
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(180deg, #2d2d2d 0%, #0d0d0d 100%);
+            border: 3px solid #111;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.55), inset 0 1px 2px rgba(255, 255, 255, 0.25);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            font-size: 26px;
+        }
+
+        .avatar-box.active-turn {
+            border-color: #2ecc71;
+            box-shadow: 0 0 14px rgba(46, 204, 113, 0.65);
+        }
+
+        /* Coin Pill & Top Action Buttons */
+        .top-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .coin-badge {
+            background: linear-gradient(180deg, #2d2d2d 0%, #111 100%);
+            border: 2px solid #d49642;
+            border-radius: 20px;
+            padding: 5px 12px;
+            color: #ffd54f;
+            font-size: 13px;
+            font-weight: 900;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.5);
+        }
+
+        .coin-icon {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 32% 30%, #fff59d 0%, #ffd54f 35%, #f57f17 85%, #8d4004 100%);
+            border: 1.5px solid #fff176;
+            box-shadow: inset 0 0 0 1.5px #b26a00, 0 1px 3px rgba(0,0,0,0.6);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #6d3600;
+            font-size: 10px;
+            font-weight: 900;
+            flex-shrink: 0;
+        }
+
+        .shop-top-btn {
+            background: linear-gradient(180deg, #f39c12 0%, #c0392b 100%);
+            border: 2px solid #ffd54f;
+            border-radius: 10px;
+            padding: 0 12px;
+            height: 44px;
+            color: #fff;
+            font-family: 'Montserrat', 'Cairo', sans-serif;
+            font-size: 12px;
+            font-weight: 900;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .shop-top-btn:active {
+            transform: scale(0.95);
+        }
+
+        .ball-rack-slots {
+            display: flex;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 5px 8px;
+            border-radius: 22px;
+            gap: 4px;
+            box-shadow: inset 0 2px 6px rgba(0,0,0,0.9), 0 2px 4px rgba(255,255,255,0.12);
+        }
+
+        .slot-circle {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: #080808;
+            border: 1px solid #222;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 800;
+            color: #000;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Center Score/Type Plaques */
+        .center-plaques {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .plaque {
+            width: 68px;
+            height: 44px;
+            background: linear-gradient(180deg, #383838 0%, #0c0c0c 52%, #000000 100%);
+            border: 2px solid #151515;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.25);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #e5e5e5;
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+
+        .plaque span.val {
+            font-size: 13px;
+            color: #ffd54f;
+            margin-top: 1px;
+        }
+
+        /* Overlays & Modals */
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(10, 22, 5, 0.82);
+            backdrop-filter: blur(6px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            padding: 16px;
+        }
+
+        .modal-card {
+            background: linear-gradient(180deg, #4b2810 0%, #2b1507 100%);
+            border: 4px solid #d49642;
+            border-radius: 22px;
+            width: 100%;
+            max-width: 440px;
+            padding: 28px 24px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.75), inset 0 2px 6px rgba(255, 220, 150, 0.25);
+            text-align: center;
+            color: #fff;
+        }
+
+        .game-logo {
+            font-size: 32px;
+            font-weight: 900;
+            letter-spacing: 1px;
+            color: #ffdf85;
+            text-shadow: 0 4px 0 #592c0c, 0 8px 16px rgba(0,0,0,0.6);
+            margin-bottom: 6px;
+        }
+
+        .game-subtitle {
+            font-size: 13px;
+            color: #cbe0b4;
+            font-weight: 600;
+            margin-bottom: 24px;
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 16px 24px;
+            font-family: 'Montserrat', 'Cairo', sans-serif;
+            font-size: 20px;
+            font-weight: 900;
+            letter-spacing: 1px;
+            color: #fff;
+            background: linear-gradient(180deg, #4cd137 0%, #27ae60 100%);
+            border: 3px solid #145a32;
+            border-radius: 14px;
+            box-shadow: 0 6px 0 #145a32, 0 10px 20px rgba(0,0,0,0.45);
+            cursor: pointer;
+            transition: transform 0.1s ease, filter 0.15s ease;
+            margin-bottom: 14px;
+        }
+
+        .btn-primary:hover {
+            filter: brightness(1.07);
+        }
+
+        .btn-primary:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 #145a32;
+        }
+
+        .btn-secondary {
+            width: 100%;
+            padding: 13px 20px;
+            font-family: 'Montserrat', 'Cairo', sans-serif;
+            font-size: 15px;
+            font-weight: 800;
+            letter-spacing: 0.8px;
+            color: #ffdf85;
+            background: linear-gradient(180deg, #3c3c3c 0%, #1c1c1c 100%);
+            border: 2px solid #8c6239;
+            border-radius: 12px;
+            box-shadow: 0 4px 0 #111, 0 6px 12px rgba(0,0,0,0.4);
+            cursor: pointer;
+            margin-bottom: 10px;
+            transition: transform 0.1s ease;
+        }
+
+        .btn-secondary:active {
+            transform: translateY(3px);
+        }
+
+        .settings-group {
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid rgba(212, 150, 66, 0.3);
+            border-radius: 14px;
+            padding: 14px;
+            margin-bottom: 18px;
+            text-align: left;
+        }
+
+        .setting-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .setting-row:last-child {
+            border-bottom: none;
+        }
+
+        .setting-label {
+            font-size: 13px;
+            font-weight: 700;
+            color: #f5e6d3;
+        }
+
+        .diff-selector {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .diff-btn, .lang-btn, .mode-btn {
+            padding: 6px 10px;
+            font-family: 'Montserrat', 'Cairo', sans-serif;
+            font-size: 11px;
+            font-weight: 800;
+            border-radius: 8px;
+            border: 1.5px solid #666;
+            background: #222;
+            color: #ccc;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .diff-btn.active, .lang-btn.active, .mode-btn.active {
+            background: #e67e22;
+            border-color: #ffd54f;
+            color: #fff;
+        }
+
+        .toggle-btn {
+            padding: 6px 14px;
+            font-family: 'Montserrat', 'Cairo', sans-serif;
+            font-size: 12px;
+            font-weight: 800;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            min-width: 64px;
+        }
+
+        .toggle-on {
+            background: #2ecc71;
+            color: #072914;
+        }
+
+        .toggle-off {
+            background: #555;
+            color: #ddd;
+        }
+
+        .dev-credit {
+            margin-top: 14px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(212, 150, 66, 0.25);
+            font-size: 12px;
+            font-weight: 800;
+            color: #ffdf85;
+            letter-spacing: 0.4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        /* Account Inputs & Shop Grid */
+        .auth-input {
+            width: 100%;
+            padding: 11px 14px;
+            margin-bottom: 10px;
+            border-radius: 10px;
+            border: 2px solid #8c6239;
+            background: rgba(0, 0, 0, 0.55);
+            color: #fff;
+            font-family: 'Montserrat', 'Cairo', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            outline: none;
+        }
+
+        .auth-input:focus {
+            border-color: #ffd54f;
+        }
+
+        .auth-error {
+            color: #ff6b6b;
+            font-size: 12px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            min-height: 16px;
+        }
+
+        .shop-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin: 10px 0 14px;
+            max-height: 230px;
+            overflow-y: auto;
+        }
+
+        .shop-item {
+            background: rgba(0, 0, 0, 0.45);
+            border: 2px solid #6e4724;
+            border-radius: 12px;
+            padding: 8px 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            position: relative;
+            transition: transform 0.1s ease, border-color 0.15s ease;
+        }
+
+        .shop-item.locked {
+            border-color: #4a3018;
+        }
+
+        .shop-item.locked .shop-item-icon {
+            filter: brightness(0.65);
+        }
+
+        .shop-item.locked.affordable {
+            border-color: #f39c12;
+        }
+
+        .shop-item.locked.affordable .shop-item-icon {
+            filter: brightness(0.95);
+        }
+
+        .lock-badge {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            background: rgba(0, 0, 0, 0.78);
+            border: 1px solid #8c6239;
+            border-radius: 6px;
+            padding: 1px 4px;
+            font-size: 10px;
+            line-height: 1.2;
+        }
+
+        @keyframes shopShake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .shop-shake {
+            animation: shopShake 0.25s ease-in-out 2;
+            border-color: #e74c3c !important;
+        }
+
+        .shop-feedback {
+            font-size: 12px;
+            font-weight: 800;
+            min-height: 18px;
+            margin-bottom: 4px;
+        }
+
+        .shop-item.equipped {
+            border-color: #2ecc71;
+            background: rgba(46, 204, 113, 0.18);
+        }
+
+        .shop-item-icon {
+            width: 54px;
+            height: 54px;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 2px solid #8c6239;
+            background: #1a1a1a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .shop-item-icon img,
+        .shop-item-icon svg {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .shop-item-name {
+            font-size: 11px;
+            font-weight: 800;
+            color: #f5e6d3;
+        }
+
+        .shop-item-price {
+            font-size: 10px;
+            font-weight: 900;
+            padding: 3px 8px;
+            border-radius: 8px;
+            background: #e67e22;
+            color: #fff;
+        }
+
+        .shop-item.owned .shop-item-price {
+            background: #34495e;
+        }
+
+        .shop-item.equipped .shop-item-price {
+            background: #27ae60;
+        }
+
+        /* Online Room & Rules Styles */
+        .online-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .online-tab {
+            flex: 1;
+            padding: 9px;
+            border-radius: 10px;
+            border: 2px solid #8c6239;
+            background: #1f1209;
+            color: #ccc;
+            font-family: 'Montserrat', 'Cairo', sans-serif;
+            font-size: 12px;
+            font-weight: 800;
+            cursor: pointer;
+        }
+
+        .online-tab.active {
+            background: #e67e22;
+            border-color: #ffd54f;
+            color: #fff;
+        }
+
+        .room-box {
+            background: rgba(0, 0, 0, 0.45);
+            border: 1.5px solid rgba(212, 150, 66, 0.4);
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 12px;
+        }
+
+        .room-code-display {
+            font-size: 22px;
+            font-weight: 900;
+            letter-spacing: 3px;
+            color: #4cd137;
+            background: #111;
+            padding: 8px 12px;
+            border-radius: 10px;
+            border: 1.5px dashed #ffd54f;
+            margin: 6px 0;
+            user-select: all;
+            -webkit-user-select: all;
+        }
+
+        .rules-list {
+            text-align: start;
+            background: rgba(0, 0, 0, 0.42);
+            border: 1px solid rgba(212, 150, 66, 0.35);
+            border-radius: 14px;
+            padding: 12px 14px;
+            max-height: 270px;
+            overflow-y: auto;
+            font-size: 12.5px;
+            line-height: 1.65;
+            color: #f5e6d3;
+            margin-bottom: 14px;
+        }
+
+        .rules-list li {
+            margin-bottom: 8px;
+            list-style-position: inside;
+        }
+
+        .rules-list strong {
+            color: #ffd54f;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* RTL Support for Settings Modal while keeping Table & HUD geometry intact */
+        .rtl-modal {
+            direction: rtl;
+        }
+        .rtl-modal .settings-group {
+            text-align: right;
+        }
+        .rtl-modal .diff-selector {
+            justify-content: flex-start;
+        }
+
+        /* Responsive Tweaks for Mobile/Small Screens */
+        @media (max-width: 820px) {
+            #game-container {
+                padding: 6px 8px;
+            }
+            .slot-circle {
+                width: 18px;
+                height: 18px;
+                font-size: 9px;
+            }
+            .ball-rack-slots {
+                padding: 3px 5px;
+                gap: 2px;
+            }
+            .center-plaques {
+                display: none;
+            }
+            .avatar-box {
+                width: 44px;
+                height: 44px;
+            }
+            #spin-widget {
+                width: 52px;
+                height: 52px;
+            }
+            #power-meter-container {
+                width: 28px;
+                height: 140px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <!-- Top Bar -->
+    <div id="top-bar">
+        <div class="top-actions">
+            <div class="coin-badge"><span class="coin-icon">$</span> <span id="hud-coins">0</span></div>
+            <button id="open-shop-btn" class="shop-top-btn">🛒 <span id="top-shop-lbl">المتجر</span></button>
+            <button id="open-rules-btn" class="shop-top-btn" style="background:linear-gradient(180deg,#2980b9 0%,#1a5276 100%);">📜 <span id="top-rules-lbl">القوانين</span></button>
+        </div>
+        <div id="status-banner">YOUR TURN — AIM &amp; DRAG CUE</div>
+        <button id="menu-btn" class="icon-btn" title="Menu &amp; Settings">
+            <div class="hamburger-line"></div>
+            <div class="hamburger-line"></div>
+            <div class="hamburger-line"></div>
+        </button>
+    </div>
+
+    <!-- Table & Right Side Controls -->
+    <div id="table-stage">
+        <div id="canvas-wrap">
+            <canvas id="poolCanvas"></canvas>
+        </div>
+
+        <div id="side-controls">
+            <div id="spin-widget" title="Cue Ball Spin (English)">
+                <div id="spin-dot"></div>
+            </div>
+            <div id="power-meter-container" title="Drag down to set shot power">
+                <div id="power-fill"></div>
+                <div id="power-cue-thumb"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom HUD -->
+    <div id="bottom-hud">
+        <!-- Player 1 (Human) -->
+        <div class="player-group">
+            <div id="p1-arrow" class="turn-arrow active-left">&#10140;</div>
+            <div id="p1-avatar" class="avatar-box active-turn">
+                <svg width="38" height="38" viewBox="0 0 40 40">
+                    <circle cx="20" cy="13" r="7.5" fill="#f3c69f"/>
+                    <path d="M6 36 C6 26, 34 26, 34 36 Z" fill="#f3c69f"/>
+                    <text x="20" y="16" font-size="10" font-weight="900" fill="#222" text-anchor="middle" font-family="Montserrat">1</text>
+                </svg>
+            </div>
+            <div id="p1-slots" class="ball-rack-slots">
+                <div class="slot-circle"></div>
+                <div class="slot-circle"></div>
+                <div class="slot-circle"></div>
+                <div class="slot-circle"></div>
+                <div class="slot-circle"></div>
+                <div class="slot-circle"></div>
+                <div class="slot-circle"></div>
+            </div>
+        </div>
+
+        <!-- Center Info Plaques -->
+        <div class="center-plaques">
+            <div class="plaque">
+                <span id="p1-hud-name">YOU</span>
+                <span id="p1-type-label" class="val">OPEN</span>
+            </div>
+            <div class="plaque">
+                <span id="mode-hud-title">MODE</span>
+                <span id="diff-label" class="val">MED</span>
+            </div>
+            <div class="plaque">
+                <span id="p2-hud-name">BOT</span>
+                <span id="p2-type-label" class="val">OPEN</span>
+            </div>
+        </div>
+
+        <!-- Player 2 (AI Bot / Player 2) -->
+        <div class="player-group">
+            <div id="p2-slots" class="ball-rack-slots">
+                <div class="slot-circle"></div>
+                <div class="slot-circle"></div>
+                <div class="slot-circle"></div>
+                <div class="slot-circle"></div>
+                <div class="slot-circle"></div>
+                <div class="slot-circle"></div>
+                <div class="slot-circle"></div>
+            </div>
+            <div id="p2-avatar" class="avatar-box">
+                <svg width="38" height="38" viewBox="0 0 40 40">
+                    <circle cx="20" cy="13" r="7.5" fill="#f3c69f"/>
+                    <path d="M6 36 C6 26, 34 26, 34 36 Z" fill="#f3c69f"/>
+                    <text x="20" y="16" font-size="10" font-weight="900" fill="#222" text-anchor="middle" font-family="Montserrat">2</text>
+                </svg>
+            </div>
+            <div id="p2-arrow" class="turn-arrow inactive" style="transform: scaleX(-1);">&#10140;</div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Start & Pause/Settings Modal -->
+<div id="main-modal" class="modal-backdrop">
+    <div id="modal-card" class="modal-card">
+        <div id="modal-title" class="game-logo">8-BALL POOL</div>
+        <div id="modal-subtitle" class="game-subtitle">CLASSIC BILLIARDS VS AI BOT</div>
+
+        <div class="settings-group">
+            <div class="setting-row">
+                <span id="lbl-language" class="setting-label">LANGUAGE / اللغة</span>
+                <div class="diff-selector">
+                    <button class="lang-btn active" data-lang="darija">الدارجة</button>
+                    <button class="lang-btn" data-lang="ar">العربية</button>
+                    <button class="lang-btn" data-lang="en">ENGLISH</button>
+                </div>
+            </div>
+            <div class="setting-row">
+                <span id="lbl-gamemode" class="setting-label">GAME MODE</span>
+                <div class="diff-selector">
+                    <button class="mode-btn active" data-mode="bot" id="btn-mode-bot">VS BOT</button>
+                    <button class="mode-btn" data-mode="2p" id="btn-mode-2p">2 PLAYERS</button>
+                    <button class="mode-btn" data-mode="online" id="btn-mode-online">🌐 ONLINE</button>
+                </div>
+            </div>
+            <div class="setting-row" id="row-difficulty">
+                <span id="lbl-difficulty" class="setting-label">BOT DIFFICULTY</span>
+                <div class="diff-selector">
+                    <button class="diff-btn" data-diff="easy" id="btn-diff-easy">EASY</button>
+                    <button class="diff-btn active" data-diff="medium" id="btn-diff-medium">MEDIUM</button>
+                    <button class="diff-btn" data-diff="hard" id="btn-diff-hard">HARD</button>
+                </div>
+            </div>
+            <div class="setting-row">
+                <span id="lbl-guide" class="setting-label">AIMING GUIDE LINE</span>
+                <button id="toggle-guide" class="toggle-btn toggle-on">ON</button>
+            </div>
+            <div class="setting-row">
+                <span id="lbl-sound" class="setting-label">SOUND EFFECTS</span>
+                <button id="toggle-sound" class="toggle-btn toggle-on">ON</button>
+            </div>
+        </div>
+
+        <button id="play-btn" class="btn-primary">PLAY</button>
+        <button id="menu-online-btn" class="btn-secondary" style="border-color:#4cd137;color:#81ecec;">🌐 أونلاين مع صاحبك (ROOM)</button>
+        <button id="menu-shop-btn" class="btn-secondary">🛒 المتجر (SHOP)</button>
+        <button id="menu-rules-btn" class="btn-secondary">📜 القوانين (RULES)</button>
+        <button id="menu-account-btn" class="btn-secondary">👤 الحساب (ACCOUNT)</button>
+        <button id="restart-btn" class="btn-secondary hidden">NEW MATCH</button>
+        <div id="dev-credit" class="dev-credit">🇲🇦 من تطوير حمزة أيت أوفقير • المغرب</div>
+    </div>
+</div>
+
+<!-- Online Room Modal (Create / Join Friend Room with Password) -->
+<div id="online-modal" class="modal-backdrop hidden">
+    <div id="online-card" class="modal-card" style="max-width: 450px;">
+        <div id="onl-title" class="game-logo" style="font-size: 25px;">🌐 أونلاين مع صاحبك</div>
+        <div id="onl-subtitle" class="game-subtitle" style="margin-bottom: 12px;">قاد روم وعطي الكود وكلمة السر لصاحبك (+10 فلوس)</div>
+
+        <div class="online-tabs">
+            <button id="tab-create-room" class="online-tab active">➕ قاد روم جديد</button>
+            <button id="tab-join-room" class="online-tab">🔑 دخل لروم صاحبك</button>
+        </div>
+
+        <!-- Create Room Panel -->
+        <div id="panel-create-room" class="room-box">
+            <div id="lbl-your-room-code" style="font-size:12px;color:#ffd54f;font-weight:800;">كود الروم ديالك (عطيه لصاحبك):</div>
+            <div id="created-room-code" class="room-code-display">----</div>
+            <input type="text" id="create-room-pass" class="auth-input" placeholder="دير كلمة سر للروم (مثلا: 1234)" maxlength="16" />
+            <div id="create-room-status" style="font-size:12px;color:#81ecec;font-weight:800;min-height:18px;margin-bottom:6px;"></div>
+            <button id="btn-create-room-start" class="btn-primary" style="font-size:16px;padding:12px;margin-bottom:0;">فتح الروم وتسنا صاحبك</button>
+        </div>
+
+        <!-- Join Room Panel -->
+        <div id="panel-join-room" class="room-box hidden">
+            <input type="text" id="join-room-code" class="auth-input" placeholder="كتب كود الروم ديال صاحبك" maxlength="12" style="text-transform:uppercase;" />
+            <input type="text" id="join-room-pass" class="auth-input" placeholder="كتب كلمة السر ديال الروم" maxlength="16" />
+            <div id="join-room-status" style="font-size:12px;color:#ff8a80;font-weight:800;min-height:18px;margin-bottom:6px;"></div>
+            <button id="btn-join-room-connect" class="btn-primary" style="font-size:16px;padding:12px;margin-bottom:0;">دخول للروم</button>
+        </div>
+
+        <button id="close-online-btn" class="btn-secondary">رجوع</button>
+    </div>
+</div>
+
+<!-- Rules Modal -->
+<div id="rules-modal" class="modal-backdrop hidden">
+    <div id="rules-card" class="modal-card" style="max-width: 480px;">
+        <div id="rules-title" class="game-logo" style="font-size: 25px;">📜 قوانين اللعبة</div>
+        <div id="rules-subtitle" class="game-subtitle" style="margin-bottom: 10px;">قوانين البلياردو 8 كرات ونظام الربح</div>
+        <ul id="rules-list-ul" class="rules-list"></ul>
+        <button id="close-rules-btn" class="btn-primary" style="font-size:16px;padding:12px;margin-bottom:0;">فهمت • رجوع</button>
+    </div>
+</div>
+
+<!-- Account Login / Register Modal -->
+<div id="account-modal" class="modal-backdrop">
+    <div id="account-card" class="modal-card">
+        <div id="acc-title" class="game-logo" style="font-size: 26px;">حساب اللاعب</div>
+        <div id="acc-subtitle" class="game-subtitle" style="margin-bottom: 14px;">دير كونط بسميتك وكلمة السر</div>
+
+        <div class="settings-group" style="margin-bottom: 12px;">
+            <div class="setting-row" style="padding: 4px 0;">
+                <span id="acc-lbl-lang" class="setting-label">اللغة</span>
+                <div class="diff-selector">
+                    <button class="lang-btn active" data-lang="darija">الدارجة</button>
+                    <button class="lang-btn" data-lang="ar">العربية</button>
+                    <button class="lang-btn" data-lang="en">ENGLISH</button>
+                </div>
+            </div>
+        </div>
+
+        <input type="text" id="input-username" class="auth-input" placeholder="سمية اللاعب (Username)" maxlength="16" />
+        <input type="password" id="input-password" class="auth-input" placeholder="كلمة السر (Password)" maxlength="24" />
+        <div id="auth-error" class="auth-error"></div>
+
+        <button id="save-account-btn" class="btn-primary" style="font-size: 17px; padding: 13px;">دخول / تسجيل الحساب</button>
+        <button id="guest-btn" class="btn-secondary">كمل كزائر (Guest)</button>
+        <div id="acc-dev-credit" class="dev-credit">🇲🇦 من تطوير حمزة أيت أوفقير • المغرب</div>
+    </div>
+</div>
+
+<!-- Shop Modal (Avatars & Cues) -->
+<div id="shop-modal" class="modal-backdrop hidden">
+    <div id="shop-card" class="modal-card" style="max-width: 470px;">
+        <div id="shop-title" class="game-logo" style="font-size: 26px;">🛒 المتجر</div>
+        <div style="display:flex; justify-content:center; align-items:center; gap:8px; margin-bottom:10px;">
+            <span id="shop-subtitle" class="game-subtitle" style="margin:0;">بدل البروفيل ديالك</span>
+            <span class="coin-badge"><span class="coin-icon">$</span> <span id="shop-coins">0</span></span>
+        </div>
+
+        <div id="shop-feedback" class="shop-feedback"></div>
+        <div id="shop-items-grid" class="shop-grid"></div>
+
+        <button id="close-shop-btn" class="btn-secondary" style="margin-top: 6px;">رجوع</button>
+    </div>
+</div>
+
+<script>
+/**
+ * 8-BALL BILLIARDS CLASSIC - COMPLETE SINGLE-FILE ENGINE
+ * Features:
+ * - Authentic wooden table, brass corner pockets, diamond sights, green felt
+ * - Rigid-body 2D collision physics, cushion reflection with spin/english, rolling friction
+ * - Full 8-ball rules: open table, solids vs stripes assignment, foul / ball-in-hand, 8-ball win/loss
+ * - Smart AI Bot opponent with 3 difficulty levels + Local 2-Player Pass & Play mode
+ * - Trilingual UI & Notifications: Darija (الدارجة المغربية), Arabic (العربية الفصحى), English
+ * - Web Audio API synthesized sound effects
+ */
+
+(() => {
+    // --- TRANSLATION DICTIONARY (DARIJA, ARABIC, ENGLISH) ---
+    const I18N = {
+        darija: {
+            dir: 'rtl',
+            gameTitle: 'بلياردو 8 كرات',
+            subtitleBot: 'العب ضد البوت الذكي',
+            subtitle2P: 'لعب ثنائي (2 لاعبين)',
+            pausedTitle: 'اللعبة موقفة',
+            pausedSubtitle: 'بدل الإعدادات ولا كمل الطرح',
+            lblLanguage: 'اللغة',
+            lblGameMode: 'نوع اللعب',
+            modeBot: 'ضد البوت',
+            mode2P: '2 لاعبين',
+            modeOnline: '🌐 أونلاين',
+            lblDifficulty: 'مستوى البوت',
+            diffEasy: 'ساهل',
+            diffMedium: 'متوسط',
+            diffHard: 'صعيب',
+            diffShortEasy: 'ساهل',
+            diffShortMedium: 'متوسط',
+            diffShortHard: 'صعيب',
+            lblGuide: 'خط التوجيه',
+            lblSound: 'الصوت',
+            on: 'شاعل',
+            off: 'طافي',
+            play: 'إلعب دابا',
+            resume: 'كمل اللعب',
+            newMatch: 'طرح جديد',
+            hudYou: 'نتا',
+            hudP1: 'لاعب 1',
+            hudBot: 'البوت',
+            hudP2: 'لاعب 2',
+            hudFriend: 'صاحبك',
+            hudMode: 'المستوى',
+            hud2PShort: 'ثنائي',
+            hudOnlineShort: 'أونلاين',
+            typeOpen: 'مفتوح',
+            typeSolids: 'سامبل',
+            typeStripes: 'مخطط',
+            turnP1: 'نوبتك — نيشن وجبد العصا',
+            turnP2: 'نوبة اللاعب 2 — نيشن وضرب',
+            botThinking: 'البوت كيفكر...',
+            botScoring: 'البوت ماركا! غيعاود يضرب...',
+            botBallInHand: 'البوت عندو الكرة فاليد...',
+            niceShotP1: 'ضربة واعرة! عاود ضرب',
+            niceShotP2: 'ضربة زوينة! لاعب 2 يعاود',
+            foulScratch: 'فوط! الكرة البيضة طاحت — حطها فين بغيتي',
+            foulNoHit: 'فوط! ما قستي تا كرة — حط الكرة البيضة',
+            foulWrongBall: 'فوط! قستي كرة ماشي ديالك — حط الكرة',
+            foulEightEarly: 'فوط! خاصك تقيس الكرة 8 — حط الكرة',
+            winP1: 'مبروك! ربحتي الطرح!',
+            winP2: 'اللاعب 2 ربح الطرح!',
+            winBot: 'البوت ربح الطرح!',
+            loseEightP1: 'فوط فالكرة 8 — البوت ربح!',
+            loseEightP1_2P: 'فوط فالكرة 8 — اللاعب 2 ربح!',
+            loseEightP2: 'اللاعب 2 دار فوط فـ 8 — نتا ربحتي!',
+            loseEightBot: 'البوت دار فوط فالكرة 8 — نتا ربحتي!',
+            winEightP1: 'ناضي! دخلتي الكرة 8 وربحتي!',
+            winEightP2: 'اللاعب 2 دخل الكرة 8 وربح!',
+            winEightBot: 'البوت دخل الكرة 8 وربح!',
+            rewardBotWin: '🎉 ربحتي ضد البوت: +5 فلوس!',
+            rewardFriendMatch: '🤝 كملتي الطرح مع صاحبك: +10 فلوس!',
+            devCredit: '🇲🇦 من تطوير حمزة أيت أوفقير • المغرب',
+            shopBtn: 'المتجر',
+            rulesBtn: 'القوانين',
+            onlineBtn: '🌐 أونلاين مع صاحبك (روم)',
+            onlTitle: '🌐 أونلاين مع صاحبك',
+            onlSubtitle: 'قاد روم وعطي الكود وكلمة السر لصاحبك (+10 فلوس)',
+            tabCreate: '➕ قاد روم جديد',
+            tabJoin: '🔑 دخل لروم صاحبك',
+            lblYourRoomCode: 'كود الروم ديالك (عطيه لصاحبك):',
+            createPassPlaceholder: 'دير كلمة سر للروم (مثلا: 1234)',
+            btnOpenRoom: 'فتح الروم وتسنا صاحبك',
+            joinCodePlaceholder: 'كتب كود الروم ديال صاحبك',
+            joinPassPlaceholder: 'كتب كلمة السر ديال الروم',
+            btnJoinRoom: 'دخول للروم',
+            waitingFriend: '⏳ الروم مفتوح! تسنا صاحبك يدخل الكود وكلمة السر...',
+            connectingRoom: '⏳ جاري الاتصال بروم صاحبك...',
+            wrongRoomPass: '❌ كلمة السر ديال الروم غالطة!',
+            roomNotFound: '❌ مالقيناش هاد الروم! تأكد من الكود',
+            friendConnected: '✅ صاحبك دخل! الطرح بدا دابا',
+            friendDisconnected: '⚠️ صاحبك خرج من الروم!',
+            waitFriendTurn: '⏳ نوبة صاحبك — تسناه يضرب...',
+            rulesTitle: '📜 قوانين اللعبة',
+            rulesSubtitle: 'قوانين البلياردو ونظام الفلوس',
+            rulesItems: [
+                '<strong>1. البداية والفلوس:</strong> كتبدا بـ <strong>0 فلوس</strong>. إلى لعبتي ضد البوت وربحتي كتآخد <strong>+5 فلوس</strong>.',
+                '<strong>2. اللعب مع صاحبك (أونلاين / ثنائي):</strong> قاد روم وعطي الكود وكلمة السر لصاحبك. ملي كيسالي الطرح (سواء ربحتي أو خسرتي) كتآخد <strong>+10 فلوس</strong>!',
+                '<strong>3. الكرات (سامبل 1-7 ومخطط 9-15):</strong> أول كرة كطيح من بعد ضربة البداية كتحدد نوع الكرات ديالك.',
+                '<strong>4. الفوط (Foul):</strong> إلى طاحت الكرة البيضة، أو ما قستي تا كرة، أو قستي كرة ديال الخصم اللولة، الخصم كيآخد الكرة فاليد ويحطها فين بغا.',
+                '<strong>5. الكرة الكحلة (رقم 8):</strong> خاصك تسالي كاع الكرات ديالك عاد تدخل الكرة 8 باش تربح. إلى دخلتيها قبل الوقت أو طاحت البيضة معاها كتخسر الطرح!'
+            ],
+            gotIt: 'فهمت • رجوع',
+            shopTitle: '🛒 متجر البروفيل',
+            shopSubtitle: 'شري وبدل البروفيل ديالك لي كيبان فاللعبة',
+            accountBtn: '👤 الحساب',
+            accTitle: 'حساب اللاعب',
+            accSubtitle: 'دير كونط بسميتك وكلمة السر',
+            accUserPlaceholder: 'سمية اللاعب (Username)',
+            accPassPlaceholder: 'كلمة السر (Password)',
+            accSubmit: 'دخول / تسجيل',
+            accGuest: 'لعب بلا كونط (زائر)',
+            accErrEmpty: 'عافاك كتب السمية وكلمة السر!',
+            accErrWrongPass: 'كلمة السر غالطة لهاد السمية!',
+            equipped: 'مختار',
+            equip: 'اختار',
+            buy: 'شري',
+            notEnoughCoins: 'ما عندكش الفلوس الكافية! ربح طرح باش تجمع الفلوس',
+            purchasedMsg: 'مبروك! شريتي البروفيل الجديد',
+            close: 'رجوع'
+        },
+        ar: {
+            dir: 'rtl',
+            gameTitle: 'بلياردو 8 كرات',
+            subtitleBot: 'تحدي الذكاء الاصطناعي',
+            subtitle2P: 'مباراة لاعبين (1 ضد 1)',
+            pausedTitle: 'إيقاف مؤقت',
+            pausedSubtitle: 'عدّل الإعدادات أو استأنف المباراة',
+            lblLanguage: 'اللغة',
+            lblGameMode: 'وضع اللعب',
+            modeBot: 'ضد البوت',
+            mode2P: 'لاعبان',
+            modeOnline: '🌐 أونلاين',
+            lblDifficulty: 'صعوبة البوت',
+            diffEasy: 'سهل',
+            diffMedium: 'متوسط',
+            diffHard: 'صعب',
+            diffShortEasy: 'سهل',
+            diffShortMedium: 'متوسط',
+            diffShortHard: 'صعب',
+            lblGuide: 'خط التصويب',
+            lblSound: 'المؤثرات الصوتية',
+            on: 'مفعّل',
+            off: 'مغلق',
+            play: 'ابدأ اللعب',
+            resume: 'استئناف',
+            newMatch: 'مباراة جديدة',
+            hudYou: 'أنت',
+            hudP1: 'لاعب 1',
+            hudBot: 'البوت',
+            hudP2: 'لاعب 2',
+            hudFriend: 'صديقك',
+            hudMode: 'الوضع',
+            hud2PShort: 'لاعبان',
+            hudOnlineShort: 'أونلاين',
+            typeOpen: 'مفتوح',
+            typeSolids: 'كاملة',
+            typeStripes: 'مخططة',
+            turnP1: 'دورك — صوّب واسحب العصا',
+            turnP2: 'دور اللاعب 2 — صوّب واضرب',
+            botThinking: 'البوت يفكر...',
+            botScoring: 'البوت سجّل هدفاً! سيلعب مجدداً...',
+            botBallInHand: 'الكرة في يد البوت...',
+            niceShotP1: 'ضربة رائعة! دورك مرة أخرى',
+            niceShotP2: 'ضربة ممتازة! دور اللاعب 2 مجدداً',
+            foulScratch: 'خطأ! سقوط الكرة البيضاء — حرّك الكرة',
+            foulNoHit: 'خطأ! لم تلمس أي كرة — حرّك الكرة',
+            foulWrongBall: 'خطأ! لمست كرة الخصم — حرّك الكرة',
+            foulEightEarly: 'خطأ! يجب لمس الكرة 8 — حرّك الكرة',
+            winP1: 'تهانينا! لقد فزت!',
+            winP2: 'فاز اللاعب 2!',
+            winBot: 'فاز البوت!',
+            loseEightP1: 'خطأ على الكرة 8 — فاز البوت!',
+            loseEightP1_2P: 'خطأ على الكرة 8 — فاز اللاعب 2!',
+            loseEightP2: 'أخطأ اللاعب 2 على الكرة 8 — أنت الفائز!',
+            loseEightBot: 'أخطأ البوت على الكرة 8 — أنت الفائز!',
+            winEightP1: 'انتصار! أدخلت الكرة 8 بنجاح!',
+            winEightP2: 'أدخل اللاعب 2 الكرة 8 وفاز!',
+            winEightBot: 'أدخل البوت الكرة 8 وفاز!',
+            rewardBotWin: '🎉 فزت على البوت: +5 عملات!',
+            rewardFriendMatch: '🤝 أكملت المباراة مع صديقك: +10 عملات!',
+            devCredit: '🇲🇦 من تطوير حمزة أيت أوفقير • المغرب',
+            shopBtn: 'المتجر',
+            rulesBtn: 'القوانين',
+            onlineBtn: '🌐 أونلاين مع صديقك (غرفة)',
+            onlTitle: '🌐 اللعب أونلاين مع صديقك',
+            onlSubtitle: 'أنشئ غرفة وأعطِ الرمز وكلمة المرور لصديقك (+10 عملات)',
+            tabCreate: '➕ إنشاء غرفة',
+            tabJoin: '🔑 الانضمام لغرفة',
+            lblYourRoomCode: 'رمز غرفتك (أرسله لصديقك):',
+            createPassPlaceholder: 'ضع كلمة مرور للغرفة (مثال: 1234)',
+            btnOpenRoom: 'فتح الغرفة وانتظار الصديق',
+            joinCodePlaceholder: 'أدخل رمز غرفة صديقك',
+            joinPassPlaceholder: 'أدخل كلمة مرور الغرفة',
+            btnJoinRoom: 'دخول الغرفة',
+            waitingFriend: '⏳ الغرفة جاهزة! بانتظار دخول صديقك...',
+            connectingRoom: '⏳ جارٍ الاتصال بغرفة صديقك...',
+            wrongRoomPass: '❌ كلمة مرور الغرفة غير صحيحة!',
+            roomNotFound: '❌ لم يتم العثور على الغرفة! تحقق من الرمز',
+            friendConnected: '✅ انضم صديقك! بدأت المباراة',
+            friendDisconnected: '⚠️ غادر صديقك الغرفة!',
+            waitFriendTurn: '⏳ دور صديقك — انتظر ضربته...',
+            rulesTitle: '📜 قوانين اللعبة',
+            rulesSubtitle: 'قوانين البلياردو ونظام العملات',
+            rulesItems: [
+                '<strong>1. الرصيد والمكافآت:</strong> تبدأ اللعبة برصيد <strong>0 عملات</strong>. عند الفوز ضد البوت تحصل على <strong>+5 عملات</strong>.',
+                '<strong>2. اللعب مع صديقك (أونلاين / لاعبان):</strong> أنشئ غرفة بكلمة مرور وأعطها لصديقك. عند انتهاء المباراة (سواء فزت أو خسرت) تحصل على <strong>+10 عملات</strong>!',
+                '<strong>3. الكرات الكاملة (1-7) والمخططة (9-15):</strong> أول كرة تُسجل قانونياً بعد ضربة البداية تحدد نوع كرات كل لاعب.',
+                '<strong>4. الأخطاء (Foul):</strong> سقوط الكرة البيضاء أو عدم لمس أي كرة أو لمس كرة الخصم أولاً يمنح الخصم الكرة في اليد.',
+                '<strong>5. الكرة السوداء (رقم 8):</strong> يجب إدخال جميع كراتك أولاً ثم إدخال الكرة 8 للفوز. إدخالها مبكراً يعني الخسارة.'
+            ],
+            gotIt: 'فهمت • رجوع',
+            shopTitle: '🛒 متجر الملف الشخصي',
+            shopSubtitle: 'اشترِ وغيّر صورتك الرمزية في المباراة',
+            accountBtn: '👤 الحساب',
+            accTitle: 'حساب اللاعب',
+            accSubtitle: 'أنشئ حساباً باسمك وكلمة المرور',
+            accUserPlaceholder: 'اسم اللاعب',
+            accPassPlaceholder: 'كلمة المرور',
+            accSubmit: 'تسجيل الدخول / إنشاء حساب',
+            accGuest: 'اللعب كضيف',
+            accErrEmpty: 'يرجى إدخال اسم اللاعب وكلمة المرور!',
+            accErrWrongPass: 'كلمة المرور غير صحيحة لهذا الحساب!',
+            equipped: 'مُجهّز',
+            equip: 'تجهيز',
+            buy: 'شراء',
+            notEnoughCoins: 'رصيدك غير كافٍ! اربح مباراة لجمع العملات',
+            purchasedMsg: 'تم الشراء وتجهيز الصورة بنجاح!',
+            close: 'إغلاق'
+        },
+        en: {
+            dir: 'ltr',
+            gameTitle: '8-BALL POOL',
+            subtitleBot: 'CLASSIC BILLIARDS VS AI BOT',
+            subtitle2P: 'LOCAL 2 PLAYERS MATCH',
+            pausedTitle: 'PAUSED',
+            pausedSubtitle: 'ADJUST SETTINGS OR RESUME MATCH',
+            lblLanguage: 'LANGUAGE',
+            lblGameMode: 'GAME MODE',
+            modeBot: 'VS BOT',
+            mode2P: '2 PLAYERS',
+            modeOnline: '🌐 ONLINE',
+            lblDifficulty: 'BOT DIFFICULTY',
+            diffEasy: 'EASY',
+            diffMedium: 'MEDIUM',
+            diffHard: 'HARD',
+            diffShortEasy: 'EASY',
+            diffShortMedium: 'MED',
+            diffShortHard: 'HARD',
+            lblGuide: 'AIMING GUIDE LINE',
+            lblSound: 'SOUND EFFECTS',
+            on: 'ON',
+            off: 'OFF',
+            play: 'PLAY',
+            resume: 'RESUME',
+            newMatch: 'NEW MATCH',
+            hudYou: 'YOU',
+            hudP1: 'P1',
+            hudBot: 'BOT',
+            hudP2: 'P2',
+            hudFriend: 'FRIEND',
+            hudMode: 'MODE',
+            hud2PShort: '2P',
+            hudOnlineShort: 'ONLINE',
+            typeOpen: 'OPEN',
+            typeSolids: 'SOLIDS',
+            typeStripes: 'STRIPES',
+            turnP1: 'YOUR TURN — AIM & DRAG CUE',
+            turnP2: "PLAYER 2'S TURN — AIM & DRAG CUE",
+            botThinking: 'BOT IS THINKING...',
+            botScoring: 'BOT SCORED! BOT SHOOTING AGAIN...',
+            botBallInHand: 'BOT HAS BALL IN HAND...',
+            niceShotP1: 'NICE SHOT! YOUR TURN AGAIN',
+            niceShotP2: "NICE SHOT! PLAYER 2'S TURN AGAIN",
+            foulScratch: 'SCRATCH! CUE BALL IN HAND',
+            foulNoHit: 'FOUL! NO BALL HIT — BALL IN HAND',
+            foulWrongBall: 'FOUL! WRONG BALL HIT — BALL IN HAND',
+            foulEightEarly: 'FOUL! MUST HIT 8-BALL — BALL IN HAND',
+            winP1: 'YOU WIN!',
+            winP2: 'PLAYER 2 WINS!',
+            winBot: 'BOT WINS!',
+            loseEightP1: 'FOUL ON 8-BALL — BOT WINS!',
+            loseEightP1_2P: 'FOUL ON 8-BALL — PLAYER 2 WINS!',
+            loseEightP2: 'PLAYER 2 FOULED 8-BALL — YOU WIN!',
+            loseEightBot: 'BOT FOULED 8-BALL — YOU WIN!',
+            winEightP1: 'VICTORY! YOU SUNK THE 8-BALL!',
+            winEightP2: 'PLAYER 2 SUNK THE 8-BALL — P2 WINS!',
+            winEightBot: 'BOT SUNK THE 8-BALL — BOT WINS!',
+            rewardBotWin: '🎉 BEAT THE BOT: +5 COINS!',
+            rewardFriendMatch: '🤝 FRIEND MATCH FINISHED: +10 COINS!',
+            devCredit: '🇲🇦 Developed by Hamza Ait Oufkir • Morocco',
+            shopBtn: 'SHOP',
+            rulesBtn: 'RULES',
+            onlineBtn: '🌐 ONLINE WITH FRIEND (ROOM)',
+            onlTitle: '🌐 PLAY ONLINE WITH FRIEND',
+            onlSubtitle: 'CREATE A ROOM WITH PASSWORD FOR YOUR FRIEND (+10 COINS)',
+            tabCreate: '➕ CREATE ROOM',
+            tabJoin: '🔑 JOIN ROOM',
+            lblYourRoomCode: 'YOUR ROOM CODE (SHARE WITH FRIEND):',
+            createPassPlaceholder: 'Set Room Password (e.g. 1234)',
+            btnOpenRoom: 'OPEN ROOM & WAIT FOR FRIEND',
+            joinCodePlaceholder: 'Enter Friend Room Code',
+            joinPassPlaceholder: 'Enter Room Password',
+            btnJoinRoom: 'JOIN ROOM',
+            waitingFriend: '⏳ Room open! Waiting for your friend to join...',
+            connectingRoom: '⏳ Connecting to friend room...',
+            wrongRoomPass: '❌ Wrong room password!',
+            roomNotFound: '❌ Room not found! Check the code',
+            friendConnected: '✅ Friend joined! Match started',
+            friendDisconnected: '⚠️ Friend disconnected!',
+            waitFriendTurn: "⏳ FRIEND'S TURN — WAITING...",
+            rulesTitle: '📜 GAME RULES',
+            rulesSubtitle: '8-BALL POOL RULES & COIN REWARDS',
+            rulesItems: [
+                '<strong>1. Starting Coins & Rewards:</strong> You start with <strong>0 coins</strong>. Defeating the AI Bot awards <strong>+5 coins</strong>.',
+                '<strong>2. Playing With a Friend (Online / 2P):</strong> Create a password-protected Room and share it with your friend. Finishing a friend match (win or lose) awards <strong>+10 coins</strong>!',
+                '<strong>3. Solids (1–7) & Stripes (9–15):</strong> The first legally pocketed ball after the break assigns groups.',
+                '<strong>4. Fouls & Ball-in-Hand:</strong> Scratching the cue ball, hitting no balls, or hitting the opponent ball first gives Ball-in-Hand.',
+                '<strong>5. The 8-Ball:</strong> Clear all your group balls first, then legally pocket the 8-ball to win. Pocketing it early or scratching on it loses the match.'
+            ],
+            gotIt: 'GOT IT • BACK',
+            shopTitle: '🛒 PROFILE SHOP',
+            shopSubtitle: 'UNLOCK & EQUIP YOUR IN-GAME AVATAR',
+            accountBtn: '👤 ACCOUNT',
+            accTitle: 'PLAYER ACCOUNT',
+            accSubtitle: 'SIGN IN OR CREATE YOUR ACCOUNT',
+            accUserPlaceholder: 'Username',
+            accPassPlaceholder: 'Password',
+            accSubmit: 'LOGIN / REGISTER',
+            accGuest: 'PLAY AS GUEST',
+            accErrEmpty: 'Please enter username and password!',
+            accErrWrongPass: 'Incorrect password for this username!',
+            equipped: 'EQUIPPED',
+            equip: 'EQUIP',
+            buy: 'BUY',
+            notEnoughCoins: 'Not enough coins! Win a match to earn more',
+            purchasedMsg: 'Purchased & equipped!',
+            close: 'BACK'
+        }
+    };
+
+    // --- DOM ELEMENTS ---
+    const canvas = document.getElementById('poolCanvas');
+    const ctx = canvas.getContext('2d');
+    const canvasWrap = document.getElementById('canvas-wrap');
+
+    const statusBanner = document.getElementById('status-banner');
+    const mainModal = document.getElementById('main-modal');
+    const modalCard = document.getElementById('modal-card');
+    const modalTitle = document.getElementById('modal-title');
+    const modalSubtitle = document.getElementById('modal-subtitle');
+    const playBtn = document.getElementById('play-btn');
+    const restartBtn = document.getElementById('restart-btn');
+    const menuBtn = document.getElementById('menu-btn');
+    const devCreditEl = document.getElementById('dev-credit');
+
+    // Account & Shop DOM
+    const accountModal = document.getElementById('account-modal');
+    const accountCard = document.getElementById('account-card');
+    const inputUsername = document.getElementById('input-username');
+    const inputPassword = document.getElementById('input-password');
+    const authError = document.getElementById('auth-error');
+    const saveAccountBtn = document.getElementById('save-account-btn');
+    const guestBtn = document.getElementById('guest-btn');
+    const menuAccountBtn = document.getElementById('menu-account-btn');
+
+    const shopModal = document.getElementById('shop-modal');
+    const shopCard = document.getElementById('shop-card');
+    const shopItemsGrid = document.getElementById('shop-items-grid');
+    const shopFeedback = document.getElementById('shop-feedback');
+    const openShopBtn = document.getElementById('open-shop-btn');
+    const menuShopBtn = document.getElementById('menu-shop-btn');
+    const closeShopBtn = document.getElementById('close-shop-btn');
+    const hudCoinsEl = document.getElementById('hud-coins');
+    const shopCoinsEl = document.getElementById('shop-coins');
+
+    // Online Room & Rules DOM
+    const onlineModal = document.getElementById('online-modal');
+    const onlineCard = document.getElementById('online-card');
+    const menuOnlineBtn = document.getElementById('menu-online-btn');
+    const closeOnlineBtn = document.getElementById('close-online-btn');
+    const tabCreateRoom = document.getElementById('tab-create-room');
+    const tabJoinRoom = document.getElementById('tab-join-room');
+    const panelCreateRoom = document.getElementById('panel-create-room');
+    const panelJoinRoom = document.getElementById('panel-join-room');
+    const createdRoomCodeEl = document.getElementById('created-room-code');
+    const createRoomPassInput = document.getElementById('create-room-pass');
+    const createRoomStatus = document.getElementById('create-room-status');
+    const btnCreateRoomStart = document.getElementById('btn-create-room-start');
+    const joinRoomCodeInput = document.getElementById('join-room-code');
+    const joinRoomPassInput = document.getElementById('join-room-pass');
+    const joinRoomStatus = document.getElementById('join-room-status');
+    const btnJoinRoomConnect = document.getElementById('btn-join-room-connect');
+
+    const rulesModal = document.getElementById('rules-modal');
+    const rulesCard = document.getElementById('rules-card');
+    const openRulesBtn = document.getElementById('open-rules-btn');
+    const menuRulesBtn = document.getElementById('menu-rules-btn');
+    const closeRulesBtn = document.getElementById('close-rules-btn');
+    const rulesListUl = document.getElementById('rules-list-ul');
+
+    const langBtns = document.querySelectorAll('.lang-btn');
+    const modeBtns = document.querySelectorAll('.mode-btn');
+    const diffBtns = document.querySelectorAll('.diff-btn');
+    const rowDifficulty = document.getElementById('row-difficulty');
+    const toggleGuideBtn = document.getElementById('toggle-guide');
+    const toggleSoundBtn = document.getElementById('toggle-sound');
+
+    const spinWidget = document.getElementById('spin-widget');
+    const spinDot = document.getElementById('spin-dot');
+    const powerMeter = document.getElementById('power-meter-container');
+    const powerFill = document.getElementById('power-fill');
+    const powerThumb = document.getElementById('power-cue-thumb');
+
+    const p1Arrow = document.getElementById('p1-arrow');
+    const p2Arrow = document.getElementById('p2-arrow');
+    const p1Avatar = document.getElementById('p1-avatar');
+    const p2Avatar = document.getElementById('p2-avatar');
+    const p1Slots = document.getElementById('p1-slots').children;
+    const p2Slots = document.getElementById('p2-slots').children;
+    const p1HudName = document.getElementById('p1-hud-name');
+    const p2HudName = document.getElementById('p2-hud-name');
+    const modeHudTitle = document.getElementById('mode-hud-title');
+    const p1TypeLabel = document.getElementById('p1-type-label');
+    const p2TypeLabel = document.getElementById('p2-type-label');
+    const diffLabel = document.getElementById('diff-label');
+
+    // --- SETTINGS & GAME STATE ---
+    const settings = {
+        lang: 'darija', // 'darija' | 'ar' | 'en'
+        gameMode: 'bot', // 'bot' | '2p'
+        difficulty: 'medium', // 'easy' | 'medium' | 'hard'
+        showGuide: true,
+        sound: true
+    };
+
+    // --- PLAYER ACCOUNT & PROFILE SHOP STATE (IN-MEMORY) ---
+    // Custom SVG illustrations faithfully crafted from your 5 uploaded profile pictures
+    const AVATAR_SVGS = {
+        default: `<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#ffffff"/><circle cx="50" cy="50" r="38" fill="none" stroke="#111111" stroke-width="5.5"/><circle cx="50" cy="39" r="13" fill="#111111"/><path d="M24 76 C28 57, 72 57, 76 76 A35 35 0 0 1 24 76 Z" fill="#111111"/></svg>`,
+        duck: `<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#f7a800"/><path d="M47 16 Q50 8 55 5 M51 17 Q57 10 62 9" stroke="#111" stroke-width="3.5" stroke-linecap="round" fill="none"/><path d="M36 98 L37 56 C31 53 30 43 35 39 C34 24 42 15 51 15 C61 15 68 25 66 40 C72 44 71 54 64 57 L68 98 Z" fill="#fffdf7" stroke="#111" stroke-width="4" stroke-linejoin="round"/><circle cx="42" cy="37" r="2.7" fill="#111"/><circle cx="60" cy="38" r="2.7" fill="#111"/><path d="M42 46 C46 41 56 41 60 47 C63 53 59 68 50 68 C41 68 38 52 42 46 Z" fill="#c96b14" stroke="#111" stroke-width="3.5"/><circle cx="47" cy="48" r="1.4" fill="#111"/><circle cx="54" cy="48" r="1.4" fill="#111"/></svg>`,
+        kitty: `<svg viewBox="0 0 100 100"><rect width="100" height="44" fill="#9dc2d6"/><rect y="44" width="100" height="56" fill="#2b6f94"/><path d="M0 58 Q25 55 50 58 T100 58" stroke="#d9eef7" stroke-width="2.5" fill="none" opacity="0.7"/><path d="M24 98 L28 66 L35 30 L44 41 Q51 39 58 41 L66 29 L73 66 L78 98 Z" fill="#e59a4c"/><path d="M37 33 L42 40 L35 42 Z M64 32 L66 41 L59 39 Z" fill="#f4c493"/><path d="M41 49 Q45 52 49 49 M54 49 Q58 52 62 49" stroke="#5a3210" stroke-width="2.4" stroke-linecap="round" fill="none"/><polygon points="49,54 54,54 51.5,57" fill="#d97b74"/><path d="M47 58 Q51.5 61 56 58" stroke="#5a3210" stroke-width="2" fill="none"/><path d="M31 63 Q51 70 71 63 L73 77 Q51 84 29 77 Z" fill="#1d4973"/><path d="M34 65 L32 76 M45 67 L44 79 M57 67 L58 79 M67 65 L69 76" stroke="#d87c2a" stroke-width="3"/><path d="M41 75 L40 98 L53 98 L52 76 Z" fill="#173b5e"/><path d="M45 76 L44 98" stroke="#d87c2a" stroke-width="3"/></svg>`,
+        anime: `<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#161215"/><path d="M18 100 C16 55 24 14 52 12 C80 12 88 52 85 100 Z" fill="#141114"/><path d="M27 32 C26 62 35 84 52 86 C68 85 77 62 76 32 Z" fill="#f4d0cf"/><ellipse cx="38" cy="54" rx="10" ry="7" fill="#e8949e" opacity="0.45"/><ellipse cx="66" cy="53" rx="9" ry="6" fill="#e8949e" opacity="0.45"/><ellipse cx="40" cy="45" rx="6.5" ry="5.5" fill="#23191e"/><circle cx="38" cy="43" r="1.8" fill="#fff"/><ellipse cx="65" cy="44" rx="6" ry="5" fill="#23191e"/><circle cx="63" cy="42" r="1.7" fill="#fff"/><circle cx="39" cy="47" r="13.5" fill="none" stroke="#181818" stroke-width="2.3"/><circle cx="67" cy="46" r="13" fill="none" stroke="#181818" stroke-width="2.3"/><path d="M52.5 45 Q53.5 42 54.5 45" stroke="#181818" stroke-width="2" fill="none"/><circle cx="32" cy="64" r="1.1" fill="#2b1e22"/><path d="M45 68 Q53 66 61 69 Q54 76 45 68 Z" fill="#8e3a48"/><path d="M49 68 C52 75 61 77 63 72 C64 68 57 66 51 67 Z" fill="#e87a8a" stroke="#9c3f4e" stroke-width="1.2"/><path d="M25 14 L33 56 M36 12 L40 52 M48 12 L47 46 M62 12 L58 48 M74 16 L69 58" stroke="#120e11" stroke-width="3.2" stroke-linecap="round"/></svg>`,
+        neytiri: `<svg viewBox="0 0 100 100"><defs><radialGradient id="naviFace" cx="45%" cy="40%" r="60%"><stop offset="0%" stop-color="#48a8e8"/><stop offset="65%" stop-color="#1d6cb5"/><stop offset="100%" stop-color="#0f3d73"/></radialGradient></defs><rect width="100" height="100" fill="#1d3b22"/><path d="M24 26 L10 22 L22 38 Z M76 26 L90 22 L78 38 Z" fill="#2475bd"/><circle cx="20" cy="36" r="3.5" fill="none" stroke="#1a2e22" stroke-width="2"/><path d="M24 14 C18 45 18 75 22 98 L78 98 C82 75 82 45 76 14 Z" fill="#1c1512"/><path d="M28 18 C27 48 34 73 50 77 C66 73 73 48 72 18 Z" fill="url(#naviFace)"/><path d="M45 36 L50 53 L55 36" fill="#2e88d1" opacity="0.75"/><ellipse cx="39" cy="41" rx="6.5" ry="4" fill="#f5d020"/><circle cx="39" cy="41" r="2.2" fill="#111"/><ellipse cx="61" cy="41" rx="6.5" ry="4" fill="#f5d020"/><circle cx="61" cy="41" r="2.2" fill="#111"/><path d="M44 62 Q50 60 56 62" stroke="#123a6b" stroke-width="2.2" fill="none"/><circle cx="50" cy="24" r="1.1" fill="#dff6ff"/><circle cx="46" cy="29" r="1" fill="#dff6ff"/><circle cx="54" cy="29" r="1" fill="#dff6ff"/><circle cx="36" cy="49" r="1" fill="#dff6ff"/><circle cx="64" cy="49" r="1" fill="#dff6ff"/><path d="M35 76 L65 76 L70 98 L30 98 Z" fill="#6b4428"/><path d="M34 81 L66 81 M32 87 L68 87 M31 93 L69 93" stroke="#d49b4b" stroke-width="2" stroke-dasharray="4 3"/></svg>`
+    };
+
+    const AVATAR_CATALOG = [
+        { id: 'default', iconKey: 'default', name: { darija: 'عادي', ar: 'افتراضي', en: 'Classic' }, price: 0 },
+        { id: 'duck', iconKey: 'duck', name: { darija: 'البطة', ar: 'البطة', en: 'Sunny Duck' }, price: 5 },
+        { id: 'kitty', iconKey: 'kitty', name: { darija: 'مشيشة البحر', ar: 'قط الشاطئ', en: 'Beach Kitty' }, price: 45 },
+        { id: 'anime', iconKey: 'anime', name: { darija: 'أنمي', ar: 'أنمي', en: 'Anime Glasses' }, price: 140 },
+        { id: 'neytiri', iconKey: 'neytiri', name: { darija: 'أفاتار', ar: 'أفاتار', en: 'Neytiri' }, price: 300 }
+    ];
+
+    const registeredAccounts = {}; // { usernameLower: { username, password, coins, ownedAvatars, equippedAvatar } }
+    let playerProfile = {
+        username: '',
+        isGuest: true,
+        coins: 0,
+        ownedAvatars: ['default'],
+        equippedAvatar: 'default'
+    };
+
+    // --- ONLINE MULTIPLAYER (PEERJS WEBRTC) STATE ---
+    let peerInstance = null;
+    let peerConn = null;
+    let isOnlineHost = false;
+    let onlineRoomActive = false;
+    let onlineFriendName = '';
+    let generatedRoomCode = '';
+
+    function generateRoomCode() {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        let code = '';
+        for (let i = 0; i < 5; i++) code += chars[Math.floor(Math.random() * chars.length)];
+        return code;
+    }
+
+    function sendOnlinePacket(payload) {
+        if (peerConn && peerConn.open) {
+            peerConn.send(payload);
+        }
+    }
+
+    function setupPeerConnection(conn, asHost) {
+        peerConn = conn;
+        isOnlineHost = asHost;
+        onlineRoomActive = true;
+        settings.gameMode = 'online';
+
+        modeBtns.forEach(b => b.classList.toggle('active', b.dataset.mode === 'online'));
+        rowDifficulty.style.display = 'none';
+
+        conn.on('data', (data) => {
+            if (!data || !data.type) return;
+            if (data.type === 'hello') {
+                onlineFriendName = data.username || '';
+                updateHUD();
+            } else if (data.type === 'aim') {
+                aimAngle = data.angle;
+                shotPower = data.power || 0;
+                updatePowerUI();
+            } else if (data.type === 'moveCue') {
+                const cue = getCueBall();
+                if (cue && !cue.pocketed) {
+                    cue.x = data.x;
+                    cue.y = data.y;
+                }
+            } else if (data.type === 'shoot') {
+                aimAngle = data.angle;
+                shootCueBall(data.angle, data.power, data.spin || { x: 0, y: 0 }, true);
+            } else if (data.type === 'syncRack') {
+                balls = data.balls;
+                turn = data.turn;
+                playerGroup = data.playerGroup;
+                botGroup = data.botGroup;
+                ballInHand = data.ballInHand;
+                isBreakShot = data.isBreakShot;
+                updateHUD();
+            }
+        });
+
+        conn.on('close', () => {
+            onlineRoomActive = false;
+            setBanner('friendDisconnected', '#ff5252');
+        });
+
+        // Start match immediately
+        onlineModal.classList.add('hidden');
+        mainModal.classList.add('hidden');
+        gameStarted = true;
+        initRack();
+        if (!asHost) {
+            // Guest waits for host's initial rack & turn 1
+            setBanner('waitFriendTurn', '#81ecec');
+        } else {
+            setBanner('friendConnected', '#4cd137');
+            setTimeout(() => setBanner('turnP1'), 1200);
+        }
+        sendOnlinePacket({ type: 'hello', username: playerProfile.username || '' });
+        applyTranslations();
+    }
+
+    function syncAccountData() {
+        if (!playerProfile.isGuest && playerProfile.username) {
+            const key = playerProfile.username.toLowerCase();
+            if (registeredAccounts[key]) {
+                registeredAccounts[key].coins = playerProfile.coins;
+                registeredAccounts[key].ownedAvatars = [...playerProfile.ownedAvatars];
+                registeredAccounts[key].equippedAvatar = playerProfile.equippedAvatar;
+            }
+        }
+        hudCoinsEl.textContent = playerProfile.coins;
+        shopCoinsEl.textContent = playerProfile.coins;
+        renderPlayerAvatar();
+    }
+
+    function renderPlayerAvatar() {
+        const item = AVATAR_CATALOG.find(a => a.id === playerProfile.equippedAvatar) || AVATAR_CATALOG[0];
+        p1Avatar.innerHTML = AVATAR_SVGS[item.iconKey] || AVATAR_SVGS.default;
+        const svgEl = p1Avatar.querySelector('svg');
+        if (svgEl) {
+            svgEl.style.width = '100%';
+            svgEl.style.height = '100%';
+            svgEl.style.display = 'block';
+        }
+    }
+
+    function renderShopGrid() {
+        const dict = I18N[settings.lang];
+        shopCoinsEl.textContent = playerProfile.coins;
+        shopItemsGrid.innerHTML = '';
+
+        AVATAR_CATALOG.forEach(item => {
+            const isOwned = playerProfile.ownedAvatars.includes(item.id);
+            const isEquipped = playerProfile.equippedAvatar === item.id;
+            const canAfford = playerProfile.coins >= item.price;
+
+            const card = document.createElement('div');
+            card.className = 'shop-item'
+                + (isOwned ? ' owned' : ' locked' + (canAfford ? ' affordable' : ''))
+                + (isEquipped ? ' equipped' : '');
+
+            const priceLabel = isEquipped
+                ? dict.equipped
+                : isOwned
+                    ? dict.equip
+                    : `${dict.buy} • <span class="coin-icon" style="width:13px;height:13px;font-size:8px;">$</span> ${item.price}`;
+
+            const lockBadgeHtml = !isOwned ? `<span class="lock-badge">🔒</span>` : '';
+
+            card.innerHTML = `
+                ${lockBadgeHtml}
+                <div class="shop-item-icon">${AVATAR_SVGS[item.iconKey]}</div>
+                <div class="shop-item-name">${item.name[settings.lang]}</div>
+                <div class="shop-item-price" style="display:inline-flex;align-items:center;gap:4px;">${priceLabel}</div>
+            `;
+
+            card.addEventListener('click', () => {
+                initAudio();
+                if (isOwned) {
+                    // Already purchased -> equip only
+                    playerProfile.equippedAvatar = item.id;
+                    shopFeedback.textContent = '';
+                    playSound('hit', 0.6);
+                    syncAccountData();
+                    renderShopGrid();
+                } else if (canAfford) {
+                    // Must purchase first before equipping
+                    playerProfile.coins -= item.price;
+                    playerProfile.ownedAvatars.push(item.id);
+                    playerProfile.equippedAvatar = item.id;
+                    shopFeedback.style.color = '#2ecc71';
+                    shopFeedback.textContent = dict.purchasedMsg;
+                    playSound('pocket', 0.9);
+                    syncAccountData();
+                    renderShopGrid();
+                } else {
+                    // Locked and not enough coins -> block selection & shake
+                    shopFeedback.style.color = '#ff6b6b';
+                    shopFeedback.textContent = dict.notEnoughCoins;
+                    card.classList.remove('shop-shake');
+                    void card.offsetWidth;
+                    card.classList.add('shop-shake');
+                    playSound('rail', 0.7);
+                }
+            });
+
+            shopItemsGrid.appendChild(card);
+        });
+    }
+
+    function t(key) {
+        return (I18N[settings.lang] && I18N[settings.lang][key]) || I18N.en[key] || key;
+    }
+
+    // Track current status key & color so switching language updates banner immediately
+    let currentBannerKey = 'turnP1';
+    let currentBannerColor = '#ffffff';
+    let modalContext = 'start'; // 'start' | 'pause' | 'gameover'
+    let gameOverWinner = 1;
+    let gameOverReasonKey = 'winEightP1';
+
+    function applyTranslations() {
+        const dict = I18N[settings.lang];
+        document.documentElement.lang = settings.lang === 'en' ? 'en' : 'ar';
+
+        // Sync active language button state across both modals
+        langBtns.forEach(b => {
+            b.classList.toggle('active', b.dataset.lang === settings.lang);
+        });
+
+        // Apply RTL/LTR to modals & banner text
+        if (dict.dir === 'rtl') {
+            modalCard.classList.add('rtl-modal');
+            accountCard.classList.add('rtl-modal');
+            shopCard.classList.add('rtl-modal');
+            onlineCard.classList.add('rtl-modal');
+            rulesCard.classList.add('rtl-modal');
+            statusBanner.style.direction = 'rtl';
+        } else {
+            modalCard.classList.remove('rtl-modal');
+            accountCard.classList.remove('rtl-modal');
+            shopCard.classList.remove('rtl-modal');
+            onlineCard.classList.remove('rtl-modal');
+            rulesCard.classList.remove('rtl-modal');
+            statusBanner.style.direction = 'ltr';
+        }
+
+        // Account & Shop Modal Texts
+        document.getElementById('acc-title').textContent = dict.accTitle;
+        document.getElementById('acc-subtitle').textContent = dict.accSubtitle;
+        document.getElementById('acc-lbl-lang').textContent = dict.lblLanguage;
+        inputUsername.placeholder = dict.accUserPlaceholder;
+        inputPassword.placeholder = dict.accPassPlaceholder;
+        saveAccountBtn.textContent = dict.accSubmit;
+        guestBtn.textContent = dict.accGuest;
+        document.getElementById('acc-dev-credit').textContent = dict.devCredit;
+
+        document.getElementById('top-shop-lbl').textContent = dict.shopBtn;
+        document.getElementById('top-rules-lbl').textContent = dict.rulesBtn;
+        menuShopBtn.textContent = `🛒 ${dict.shopBtn}`;
+        menuRulesBtn.textContent = `📜 ${dict.rulesBtn}`;
+        menuOnlineBtn.textContent = dict.onlineBtn;
+        menuAccountBtn.textContent = playerProfile.username
+            ? `👤 ${playerProfile.username}`
+            : dict.accountBtn;
+        document.getElementById('shop-title').textContent = dict.shopTitle;
+        document.getElementById('shop-subtitle').textContent = dict.shopSubtitle;
+        closeShopBtn.textContent = dict.close;
+
+        // Online Room & Rules Modal Texts
+        document.getElementById('onl-title').textContent = dict.onlTitle;
+        document.getElementById('onl-subtitle').textContent = dict.onlSubtitle;
+        tabCreateRoom.textContent = dict.tabCreate;
+        tabJoinRoom.textContent = dict.tabJoin;
+        document.getElementById('lbl-your-room-code').textContent = dict.lblYourRoomCode;
+        createRoomPassInput.placeholder = dict.createPassPlaceholder;
+        btnCreateRoomStart.textContent = dict.btnOpenRoom;
+        joinRoomCodeInput.placeholder = dict.joinCodePlaceholder;
+        joinRoomPassInput.placeholder = dict.joinPassPlaceholder;
+        btnJoinRoomConnect.textContent = dict.btnJoinRoom;
+        closeOnlineBtn.textContent = dict.close;
+
+        document.getElementById('rules-title').textContent = dict.rulesTitle;
+        document.getElementById('rules-subtitle').textContent = dict.rulesSubtitle;
+        closeRulesBtn.textContent = dict.gotIt;
+        rulesListUl.innerHTML = dict.rulesItems.map(li => `<li>${li}</li>`).join('');
+
+        // Settings Labels & Buttons
+        document.getElementById('lbl-language').textContent = dict.lblLanguage;
+        document.getElementById('lbl-gamemode').textContent = dict.lblGameMode;
+        document.getElementById('btn-mode-bot').textContent = dict.modeBot;
+        document.getElementById('btn-mode-2p').textContent = dict.mode2P;
+        document.getElementById('btn-mode-online').textContent = dict.modeOnline;
+        document.getElementById('lbl-difficulty').textContent = dict.lblDifficulty;
+        document.getElementById('btn-diff-easy').textContent = dict.diffEasy;
+        document.getElementById('btn-diff-medium').textContent = dict.diffMedium;
+        document.getElementById('btn-diff-hard').textContent = dict.diffHard;
+        document.getElementById('lbl-guide').textContent = dict.lblGuide;
+        document.getElementById('lbl-sound').textContent = dict.lblSound;
+
+        toggleGuideBtn.textContent = settings.showGuide ? dict.on : dict.off;
+        toggleSoundBtn.textContent = settings.sound ? dict.on : dict.off;
+        restartBtn.textContent = dict.newMatch;
+        devCreditEl.textContent = dict.devCredit;
+
+        // Modal Header depending on state
+        if (modalContext === 'start') {
+            modalTitle.textContent = dict.gameTitle;
+            modalSubtitle.textContent = settings.gameMode === 'bot' ? dict.subtitleBot : dict.subtitle2P;
+            playBtn.textContent = dict.play;
+        } else if (modalContext === 'pause') {
+            modalTitle.textContent = dict.pausedTitle;
+            modalSubtitle.textContent = dict.pausedSubtitle;
+            playBtn.textContent = dict.resume;
+        } else if (modalContext === 'gameover') {
+            if (gameOverWinner === 1) {
+                modalTitle.textContent = dict.winP1;
+            } else {
+                modalTitle.textContent = settings.gameMode === 'bot' ? dict.winBot : dict.winP2;
+            }
+            const rewardNote = settings.gameMode === 'bot'
+                ? (gameOverWinner === 1 ? ` • ${dict.rewardBotWin}` : '')
+                : ` • ${dict.rewardFriendMatch}`;
+            modalSubtitle.textContent = t(gameOverReasonKey) + rewardNote;
+        }
+
+        // Refresh active banner & HUD labels
+        setBanner(currentBannerKey, currentBannerColor);
+        updateHUD();
+    }
+
+    // Virtual logical table coordinates (2:1 inner felt ratio)
+    const LOGICAL_W = 1000;
+    const LOGICAL_H = 560;
+    const RAIL_WIDTH = 54;
+    const CUSHION_WIDTH = 16;
+    const PLAY_LEFT = RAIL_WIDTH + CUSHION_WIDTH;
+    const PLAY_RIGHT = LOGICAL_W - RAIL_WIDTH - CUSHION_WIDTH;
+    const PLAY_TOP = RAIL_WIDTH + CUSHION_WIDTH;
+    const PLAY_BOTTOM = LOGICAL_H - RAIL_WIDTH - CUSHION_WIDTH;
+    const PLAY_W = PLAY_RIGHT - PLAY_LEFT;
+    const PLAY_H = PLAY_BOTTOM - PLAY_TOP;
+    const BALL_RADIUS = 13.2;
+    const POCKET_RADIUS = 23.5;
+    const HEAD_STRING_X = PLAY_LEFT + PLAY_W * 0.25;
+
+    // Standard Pool Ball Palette
+    const BALL_COLORS = {
+        0: '#ffffff',
+        1: '#f5c71a', // Yellow
+        2: '#1b52c7', // Blue
+        3: '#d92626', // Red
+        4: '#6e2594', // Purple
+        5: '#f26b1d', // Orange
+        6: '#177a3c', // Green
+        7: '#8c1d24', // Maroon
+        8: '#181818', // 8-Ball Black
+        9: '#f5c71a',
+        10: '#1b52c7',
+        11: '#d92626',
+        12: '#6e2594',
+        13: '#f26b1d',
+        14: '#177a3c',
+        15: '#8c1d24'
+    };
+
+    // 6 Pockets positions
+    const pockets = [
+        { x: PLAY_LEFT - 2, y: PLAY_TOP - 2, corner: true },
+        { x: (PLAY_LEFT + PLAY_RIGHT) / 2, y: PLAY_TOP - 7, corner: false },
+        { x: PLAY_RIGHT + 2, y: PLAY_TOP - 2, corner: true },
+        { x: PLAY_LEFT - 2, y: PLAY_BOTTOM + 2, corner: true },
+        { x: (PLAY_LEFT + PLAY_RIGHT) / 2, y: PLAY_BOTTOM + 7, corner: false },
+        { x: PLAY_RIGHT + 2, y: PLAY_BOTTOM + 2, corner: true }
+    ];
+
+    let balls = [];
+    let gameStarted = false;
+    let gameOver = false;
+    let turn = 1; // 1 = Human Player, 2 = AI Bot
+    let playerGroup = null; // 'solids' | 'stripes' | null
+    let botGroup = null;
+    let isSimulating = false;
+    let ballInHand = false;
+    let isBreakShot = true;
+
+    // Turn tracking variables
+    let pocketedThisTurn = [];
+    let firstHitBall = null;
+    let cueBallPocketed = false;
+
+    // Aiming & Input state
+    let aimAngle = 0;
+    let shotPower = 0; // 0 to 1
+    let isDraggingAim = false;
+    let isPullingShot = false;
+    let isDraggingPowerBar = false;
+    let pullStartPos = { x: 0, y: 0 };
+    let spinOffset = { x: 0, y: 0 }; // -1 to 1
+
+    // Bot AI state
+    let botThinking = false;
+    let botTargetAngle = 0;
+    let botTargetPower = 0;
+    let botShootTimer = 0;
+
+    // Pre-rendered felt texture canvas for performance
+    let feltPatternCanvas = null;
+
+    // --- WEB AUDIO API SYNTHESIZER ---
+    let audioCtx = null;
+
+    function initAudio() {
+        if (!audioCtx) {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (AudioContext) audioCtx = new AudioContext();
+        }
+        if (audioCtx && audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+    }
+
+    function playSound(type, intensity = 0.7) {
+        if (!settings.sound) return;
+        initAudio();
+        if (!audioCtx) return;
+
+        const now = audioCtx.currentTime;
+        const vol = Math.min(1, Math.max(0.05, intensity));
+
+        if (type === 'hit') {
+            // Crisp ivory ball-to-ball clack
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(1400 + Math.random() * 250, now);
+            osc.frequency.exponentialRampToValueAtTime(280, now + 0.045);
+
+            gain.gain.setValueAtTime(vol * 0.55, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(now);
+            osc.stop(now + 0.055);
+        } else if (type === 'cue') {
+            // Cue tip strike
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(320, now);
+            osc.frequency.exponentialRampToValueAtTime(95, now + 0.07);
+
+            gain.gain.setValueAtTime(vol * 0.65, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.075);
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(now);
+            osc.stop(now + 0.08);
+        } else if (type === 'rail') {
+            // Rubber cushion thud
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(150, now);
+            osc.frequency.exponentialRampToValueAtTime(55, now + 0.08);
+
+            gain.gain.setValueAtTime(vol * 0.35, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.085);
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(now);
+            osc.stop(now + 0.09);
+        } else if (type === 'pocket') {
+            // Pocket drop thump
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(120, now);
+            osc.frequency.exponentialRampToValueAtTime(38, now + 0.22);
+
+            gain.gain.setValueAtTime(0.6, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(now);
+            osc.stop(now + 0.25);
+        }
+    }
+
+    // --- PROCEDURAL FELT TEXTURE ---
+    function buildFeltTexture() {
+        feltPatternCanvas = document.createElement('canvas');
+        feltPatternCanvas.width = 128;
+        feltPatternCanvas.height = 128;
+        const fctx = feltPatternCanvas.getContext('2d');
+        fctx.fillStyle = '#588227';
+        fctx.fillRect(0, 0, 128, 128);
+
+        for (let i = 0; i < 1600; i++) {
+            const x = Math.random() * 128;
+            const y = Math.random() * 128;
+            fctx.fillStyle = Math.random() > 0.5 ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.045)';
+            fctx.fillRect(x, y, 1.5, 1.5);
+        }
+    }
+
+    // --- BALL SETUP & RACKING ---
+    function initRack() {
+        balls = [];
+        // Cue Ball
+        balls.push({
+            id: 0,
+            x: HEAD_STRING_X,
+            y: PLAY_TOP + PLAY_H / 2,
+            vx: 0,
+            vy: 0,
+            pocketed: false,
+            spinX: 0,
+            spinY: 0
+        });
+
+        // Standard 8-Ball Triangle Rack (8 in center, one solid & one stripe on back corners)
+        const rackOrder = [
+            1,
+            2, 10,
+            15, 8, 7,
+            6, 9, 5, 4,
+            3, 13, 11, 12, 14
+        ];
+
+        const apexX = PLAY_LEFT + PLAY_W * 0.74;
+        const apexY = PLAY_TOP + PLAY_H / 2;
+        const rowSpacing = BALL_RADIUS * 2 * Math.cos(Math.PI / 6) + 0.3;
+        const colSpacing = BALL_RADIUS * 2 + 0.3;
+
+        let idx = 0;
+        for (let row = 0; row < 5; row++) {
+            const count = row + 1;
+            const startY = apexY - (row * colSpacing) / 2;
+            const x = apexX + row * rowSpacing;
+            for (let col = 0; col < count; col++) {
+                const y = startY + col * colSpacing;
+                balls.push({
+                    id: rackOrder[idx++],
+                    x,
+                    y,
+                    vx: 0,
+                    vy: 0,
+                    pocketed: false,
+                    spinX: 0,
+                    spinY: 0
+                });
+            }
+        }
+
+        // Reset match variables
+        turn = 1;
+        playerGroup = null;
+        botGroup = null;
+        isSimulating = false;
+        ballInHand = false;
+        isBreakShot = true;
+        gameOver = false;
+        botThinking = false;
+        aimAngle = 0;
+        shotPower = 0;
+        resetSpin();
+        updateHUD();
+        setBanner('turnP1');
+    }
+
+    function getCueBall() {
+        return balls[0];
+    }
+
+    function isSolid(id) {
+        return id >= 1 && id <= 7;
+    }
+
+    function isStripe(id) {
+        return id >= 9 && id <= 15;
+    }
+
+    function getBallGroup(id) {
+        if (isSolid(id)) return 'solids';
+        if (isStripe(id)) return 'stripes';
+        if (id === 8) return 'eight';
+        return 'cue';
+    }
+
+    // --- UI & HUD UPDATES ---
+    function setBanner(key, color = '#ffffff') {
+        currentBannerKey = key;
+        currentBannerColor = color;
+        statusBanner.textContent = t(key);
+        statusBanner.style.color = color;
+    }
+
+    function resetSpin() {
+        spinOffset = { x: 0, y: 0 };
+        spinDot.style.left = '50%';
+        spinDot.style.top = '50%';
+    }
+
+    function updatePowerUI() {
+        const pct = Math.round(shotPower * 100);
+        powerFill.style.height = pct + '%';
+        const maxTravel = powerMeter.clientHeight - 66;
+        powerThumb.style.top = (6 + shotPower * maxTravel) + 'px';
+    }
+
+    function updateHUD() {
+        const dict = I18N[settings.lang];
+
+        // Turn arrows & avatars
+        if (turn === 1) {
+            p1Arrow.className = 'turn-arrow active-left';
+            p2Arrow.className = 'turn-arrow inactive';
+            p1Avatar.classList.add('active-turn');
+            p2Avatar.classList.remove('active-turn');
+        } else {
+            p1Arrow.className = 'turn-arrow inactive';
+            p2Arrow.className = 'turn-arrow active-right';
+            p1Avatar.classList.remove('active-turn');
+            p2Avatar.classList.add('active-turn');
+        }
+
+        // Player names & Mode plaques
+        const p1Display = playerProfile.username
+            ? playerProfile.username.toUpperCase()
+            : (settings.gameMode === 'bot' ? dict.hudYou : dict.hudP1);
+        p1HudName.textContent = p1Display;
+        if (settings.gameMode === 'online') {
+            p2HudName.textContent = onlineFriendName ? onlineFriendName.toUpperCase() : dict.hudFriend;
+        } else {
+            p2HudName.textContent = settings.gameMode === 'bot' ? dict.hudBot : dict.hudP2;
+        }
+        modeHudTitle.textContent = dict.hudMode;
+
+        const formatGroup = (grp) => {
+            if (grp === 'solids') return dict.typeSolids;
+            if (grp === 'stripes') return dict.typeStripes;
+            return dict.typeOpen;
+        };
+
+        p1TypeLabel.textContent = formatGroup(playerGroup);
+        p2TypeLabel.textContent = formatGroup(botGroup);
+
+        if (settings.gameMode === '2p') {
+            diffLabel.textContent = dict.hud2PShort;
+        } else if (settings.gameMode === 'online') {
+            diffLabel.textContent = dict.hudOnlineShort;
+        } else {
+            if (settings.difficulty === 'easy') diffLabel.textContent = dict.diffShortEasy;
+            else if (settings.difficulty === 'hard') diffLabel.textContent = dict.diffShortHard;
+            else diffLabel.textContent = dict.diffShortMedium;
+        }
+
+        // Populate pocketed ball slots
+        const solidsPocketed = balls.filter(b => b.pocketed && isSolid(b.id)).sort((a, b) => a.id - b.id);
+        const stripesPocketed = balls.filter(b => b.pocketed && isStripe(b.id)).sort((a, b) => a.id - b.id);
+
+        let p1List = [];
+        let p2List = [];
+
+        if (playerGroup === 'solids') {
+            p1List = solidsPocketed;
+            p2List = stripesPocketed;
+        } else if (playerGroup === 'stripes') {
+            p1List = stripesPocketed;
+            p2List = solidsPocketed;
+        }
+
+        renderSlotRack(p1Slots, p1List);
+        renderSlotRack(p2Slots, p2List);
+    }
+
+    function renderSlotRack(slotElements, ballList) {
+        for (let i = 0; i < 7; i++) {
+            const slot = slotElements[i];
+            const b = ballList[i];
+            if (b) {
+                const color = BALL_COLORS[b.id];
+                if (isStripe(b.id)) {
+                    slot.style.background = `linear-gradient(180deg, #fff 22%, ${color} 22%, ${color} 78%, #fff 78%)`;
+                } else {
+                    slot.style.background = `radial-gradient(circle at 35% 30%, #fff 0%, ${color} 35%, #000 100%)`;
+                }
+                slot.innerHTML = `<span style="background:#fff;border-radius:50%;width:13px;height:13px;display:flex;align-items:center;justify-content:center;font-size:8px;line-height:1;">${b.id}</span>`;
+            } else {
+                slot.style.background = '#080808';
+                slot.innerHTML = '';
+            }
+        }
+    }
+
+    // --- PHYSICS SIMULATION ---
+    function shootCueBall(angle, power, spin, fromRemote = false) {
+        if (power < 0.04) return;
+        const cue = getCueBall();
+        const maxSpeed = 26.5;
+        const speed = (0.12 + power * 0.88) * maxSpeed;
+
+        cue.vx = Math.cos(angle) * speed;
+        cue.vy = Math.sin(angle) * speed;
+        cue.spinX = spin.x;
+        cue.spinY = spin.y;
+
+        isSimulating = true;
+        ballInHand = false;
+        pocketedThisTurn = [];
+        firstHitBall = null;
+        cueBallPocketed = false;
+        shotPower = 0;
+        updatePowerUI();
+        playSound('cue', power);
+
+        if (settings.gameMode === 'online' && onlineRoomActive && !fromRemote) {
+            sendOnlinePacket({ type: 'shoot', angle, power, spin });
+        }
+    }
+
+    function stepPhysics() {
+        if (!isSimulating) return;
+
+        const subSteps = 6;
+        const friction = Math.pow(0.9865, 1 / subSteps);
+        let anyMoving = false;
+
+        for (let step = 0; step < subSteps; step++) {
+            // Move balls & apply cushion bounces
+            for (let i = 0; i < balls.length; i++) {
+                const b = balls[i];
+                if (b.pocketed) continue;
+
+                b.x += b.vx / subSteps;
+                b.y += b.vy / subSteps;
+
+                // Apply follow/draw spin acceleration slightly after initial contact
+                if (b.id === 0 && (Math.abs(b.spinY) > 0.05) && firstHitBall !== null) {
+                    const spd = Math.hypot(b.vx, b.vy);
+                    if (spd > 0.2) {
+                        const nx = b.vx / spd;
+                        const ny = b.vy / spd;
+                        b.vx += nx * (-b.spinY * 0.025) / subSteps;
+                        b.vy += ny * (-b.spinY * 0.025) / subSteps;
+                        b.spinY *= 0.985;
+                    }
+                }
+
+                // Check Pockets first so balls near pocket jaws fall in smoothly
+                let fellIn = false;
+                for (let p = 0; p < pockets.length; p++) {
+                    const pocket = pockets[p];
+                    const dist = Math.hypot(b.x - pocket.x, b.y - pocket.y);
+                    const captureR = pocket.corner ? POCKET_RADIUS * 1.04 : POCKET_RADIUS * 0.96;
+                    if (dist < captureR) {
+                        b.pocketed = true;
+                        b.vx = 0;
+                        b.vy = 0;
+                        fellIn = true;
+                        playSound('pocket', 0.85);
+                        if (b.id === 0) {
+                            cueBallPocketed = true;
+                        } else {
+                            pocketedThisTurn.push(b);
+                        }
+                        break;
+                    }
+                }
+                if (fellIn) continue;
+
+                // Cushion Collisions (skip pocket mouth openings)
+                const nearTopOrBottomPocket =
+                    Math.abs(b.x - PLAY_LEFT) < POCKET_RADIUS * 1.15 ||
+                    Math.abs(b.x - PLAY_RIGHT) < POCKET_RADIUS * 1.15 ||
+                    Math.abs(b.x - (PLAY_LEFT + PLAY_RIGHT) / 2) < POCKET_RADIUS * 1.05;
+
+                const nearSideCornerPocket =
+                    Math.abs(b.y - PLAY_TOP) < POCKET_RADIUS * 1.15 ||
+                    Math.abs(b.y - PLAY_BOTTOM) < POCKET_RADIUS * 1.15;
+
+                if (!nearSideCornerPocket) {
+                    if (b.x - BALL_RADIUS < PLAY_LEFT) {
+                        b.x = PLAY_LEFT + BALL_RADIUS;
+                        b.vx = -b.vx * 0.82;
+                        if (b.id === 0) b.vy += b.spinX * 1.6;
+                        playSound('rail', Math.hypot(b.vx, b.vy) / 20);
+                    } else if (b.x + BALL_RADIUS > PLAY_RIGHT) {
+                        b.x = PLAY_RIGHT - BALL_RADIUS;
+                        b.vx = -b.vx * 0.82;
+                        if (b.id === 0) b.vy -= b.spinX * 1.6;
+                        playSound('rail', Math.hypot(b.vx, b.vy) / 20);
+                    }
+                }
+
+                if (!nearTopOrBottomPocket) {
+                    if (b.y - BALL_RADIUS < PLAY_TOP) {
+                        b.y = PLAY_TOP + BALL_RADIUS;
+                        b.vy = -b.vy * 0.82;
+                        if (b.id === 0) b.vx -= b.spinX * 1.6;
+                        playSound('rail', Math.hypot(b.vx, b.vy) / 20);
+                    } else if (b.y + BALL_RADIUS > PLAY_BOTTOM) {
+                        b.y = PLAY_BOTTOM - BALL_RADIUS;
+                        b.vy = -b.vy * 0.82;
+                        if (b.id === 0) b.vx += b.spinX * 1.6;
+                        playSound('rail', Math.hypot(b.vx, b.vy) / 20);
+                    }
+                }
+            }
+
+            // Ball-to-Ball Elastic Collisions
+            for (let i = 0; i < balls.length; i++) {
+                const b1 = balls[i];
+                if (b1.pocketed) continue;
+
+                for (let j = i + 1; j < balls.length; j++) {
+                    const b2 = balls[j];
+                    if (b2.pocketed) continue;
+
+                    const dx = b2.x - b1.x;
+                    const dy = b2.y - b1.y;
+                    const dist = Math.hypot(dx, dy);
+                    const minDist = BALL_RADIUS * 2;
+
+                    if (dist < minDist && dist > 0.0001) {
+                        // Record first ball hit by cue ball
+                        if (firstHitBall === null) {
+                            if (b1.id === 0) firstHitBall = b2;
+                            else if (b2.id === 0) firstHitBall = b1;
+                        }
+
+                        // Separate overlapping balls
+                        const overlap = (minDist - dist) * 0.5;
+                        const nx = dx / dist;
+                        const ny = dy / dist;
+                        b1.x -= nx * overlap;
+                        b1.y -= ny * overlap;
+                        b2.x += nx * overlap;
+                        b2.y += ny * overlap;
+
+                        // Relative velocity along collision normal
+                        const rvx = b2.vx - b1.vx;
+                        const rvy = b2.vy - b1.vy;
+                        const velAlongNormal = rvx * nx + rvy * ny;
+
+                        if (velAlongNormal < 0) {
+                            const restitution = 0.94;
+                            const impulse = -(1 + restitution) * velAlongNormal * 0.5;
+                            b1.vx -= impulse * nx;
+                            b1.vy -= impulse * ny;
+                            b2.vx += impulse * nx;
+                            b2.vy += impulse * ny;
+
+                            if (step === 0) {
+                                playSound('hit', Math.abs(velAlongNormal) / 18);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Apply Rolling Friction
+            for (let i = 0; i < balls.length; i++) {
+                const b = balls[i];
+                if (b.pocketed) continue;
+                b.vx *= friction;
+                b.vy *= friction;
+
+                const spd = Math.hypot(b.vx, b.vy);
+                if (spd < 0.055) {
+                    b.vx = 0;
+                    b.vy = 0;
+                } else {
+                    anyMoving = true;
+                }
+            }
+        }
+
+        if (!anyMoving) {
+            isSimulating = false;
+            evaluateTurnRules();
+        }
+    }
+
+    // --- 8-BALL RULES EVALUATION ---
+    function evaluateTurnRules() {
+        const currentGroup = turn === 1 ? playerGroup : botGroup;
+        const eightBallPocketed = pocketedThisTurn.some(b => b.id === 8);
+
+        // Check 8-Ball pocketed
+        if (eightBallPocketed) {
+            const remainingOwnBalls = currentGroup
+                ? balls.filter(b => !b.pocketed && getBallGroup(b.id) === currentGroup).length
+                : 7;
+
+            if (cueBallPocketed || remainingOwnBalls > 0 || isBreakShot) {
+                // Early 8-ball or scratch on 8-ball -> Current player loses!
+                const loser = turn;
+                const winner = turn === 1 ? 2 : 1;
+                let reasonKey = 'loseEightP1';
+                if (loser === 1) {
+                    reasonKey = settings.gameMode === 'bot' ? 'loseEightP1' : 'loseEightP1_2P';
+                } else {
+                    reasonKey = settings.gameMode === 'bot' ? 'loseEightBot' : 'loseEightP2';
+                }
+                endGame(winner, reasonKey);
+            } else {
+                // Legal 8-ball pocket -> Current player wins!
+                let reasonKey = 'winEightP1';
+                if (turn === 2) {
+                    reasonKey = settings.gameMode === 'bot' ? 'winEightBot' : 'winEightP2';
+                }
+                endGame(turn, reasonKey);
+            }
+            return;
+        }
+
+        // Check Fouls
+        let foul = false;
+        let foulReasonKey = '';
+
+        if (cueBallPocketed) {
+            foul = true;
+            foulReasonKey = 'foulScratch';
+        } else if (firstHitBall === null) {
+            foul = true;
+            foulReasonKey = 'foulNoHit';
+        } else if (!isBreakShot && currentGroup !== null) {
+            const remainingOwn = balls.filter(b => !b.pocketed && getBallGroup(b.id) === currentGroup).length;
+            const hitGroup = getBallGroup(firstHitBall.id);
+            if (remainingOwn > 0 && hitGroup !== currentGroup) {
+                foul = true;
+                foulReasonKey = 'foulWrongBall';
+            } else if (remainingOwn === 0 && firstHitBall.id !== 8) {
+                foul = true;
+                foulReasonKey = 'foulEightEarly';
+            }
+        }
+
+        isBreakShot = false;
+        resetSpin();
+
+        // Respawn cue ball if scratched
+        if (cueBallPocketed) {
+            const cue = getCueBall();
+            cue.pocketed = false;
+            cue.vx = 0;
+            cue.vy = 0;
+            placeCueBallSafely();
+        }
+
+        if (foul) {
+            switchTurn();
+            ballInHand = true;
+            updateHUD();
+            if (settings.gameMode === 'online') {
+                setBanner(isMyOnlineTurn() ? foulReasonKey : 'waitFriendTurn', '#ffd54f');
+            } else if (turn === 1 || settings.gameMode === '2p') {
+                setBanner(foulReasonKey, '#ffd54f');
+            } else {
+                setBanner('botBallInHand', '#ff8a80');
+                triggerBotTurn();
+            }
+            return;
+        }
+
+        // Assign Solids/Stripes if table is still open
+        let madeOwnBall = false;
+        const coloredPocketed = pocketedThisTurn.filter(b => b.id !== 8);
+
+        if (coloredPocketed.length > 0) {
+            if (playerGroup === null) {
+                const firstType = getBallGroup(coloredPocketed[0].id);
+                if (turn === 1) {
+                    playerGroup = firstType;
+                    botGroup = firstType === 'solids' ? 'stripes' : 'solids';
+                } else {
+                    botGroup = firstType;
+                    playerGroup = firstType === 'solids' ? 'stripes' : 'solids';
+                }
+                madeOwnBall = true;
+            } else {
+                const activeGroup = turn === 1 ? playerGroup : botGroup;
+                madeOwnBall = coloredPocketed.some(b => getBallGroup(b.id) === activeGroup);
+            }
+        }
+
+        updateHUD();
+
+        if (madeOwnBall) {
+            // Keep turn!
+            if (settings.gameMode === 'online') {
+                setBanner(isMyOnlineTurn() ? 'niceShotP1' : 'waitFriendTurn', '#81c784');
+            } else if (turn === 1) {
+                setBanner('niceShotP1', '#81c784');
+            } else if (settings.gameMode === '2p') {
+                setBanner('niceShotP2', '#81c784');
+            } else {
+                setBanner('botScoring');
+                triggerBotTurn();
+            }
+        } else {
+            switchTurn();
+            updateHUD();
+            if (settings.gameMode === 'online') {
+                setBanner(isMyOnlineTurn() ? 'turnP1' : 'waitFriendTurn');
+            } else if (turn === 1) {
+                setBanner('turnP1');
+            } else if (settings.gameMode === '2p') {
+                setBanner('turnP2');
+            } else {
+                setBanner('botThinking');
+                triggerBotTurn();
+            }
+        }
+    }
+
+    function switchTurn() {
+        turn = turn === 1 ? 2 : 1;
+    }
+
+    function placeCueBallSafely() {
+        const cue = getCueBall();
+        let testX = HEAD_STRING_X;
+        let testY = PLAY_TOP + PLAY_H / 2;
+
+        // Find free spot near head string
+        for (let offset = 0; offset < 220; offset += 15) {
+            const candidates = [
+                { x: testX, y: testY + offset },
+                { x: testX, y: testY - offset },
+                { x: testX + offset, y: testY },
+                { x: testX - offset, y: testY }
+            ];
+            for (const c of candidates) {
+                if (c.x < PLAY_LEFT + BALL_RADIUS || c.x > PLAY_RIGHT - BALL_RADIUS ||
+                    c.y < PLAY_TOP + BALL_RADIUS || c.y > PLAY_BOTTOM - BALL_RADIUS) continue;
+                const overlap = balls.some(b => b.id !== 0 && !b.pocketed && Math.hypot(b.x - c.x, b.y - c.y) < BALL_RADIUS * 2.2);
+                if (!overlap) {
+                    cue.x = c.x;
+                    cue.y = c.y;
+                    return;
+                }
+            }
+        }
+    }
+
+    function endGame(winner, reasonKey) {
+        gameOver = true;
+        gameOverWinner = winner;
+        gameOverReasonKey = reasonKey;
+        modalContext = 'gameover';
+
+        // Coin rewards:
+        // - VS Bot: +5 coins if player wins
+        // - With Friend (Online or 2P): +10 coins whether you win or lose!
+        if (settings.gameMode === 'bot') {
+            if (winner === 1) {
+                playerProfile.coins += 5;
+            }
+        } else {
+            playerProfile.coins += 10;
+        }
+        syncAccountData();
+
+        updateHUD();
+        setBanner(reasonKey, winner === 1 ? '#4cd137' : '#ff5252');
+
+        setTimeout(() => {
+            applyTranslations();
+            playBtn.classList.add('hidden');
+            restartBtn.classList.remove('hidden');
+            mainModal.classList.remove('hidden');
+        }, 1200);
+    }
+
+    // --- SMART AI BOT OPPONENT ---
+    function triggerBotTurn() {
+        if (gameOver) return;
+        botThinking = true;
+
+        // If bot got ball in hand, place cue ball in a strong position
+        if (ballInHand) {
+            placeCueBallSafely();
+            ballInHand = false;
+        }
+
+        const cue = getCueBall();
+        const validTargets = getValidTargetsForGroup(botGroup);
+
+        let bestShot = null;
+        let bestScore = -Infinity;
+
+        for (const target of validTargets) {
+            for (const pocket of pockets) {
+                // Vector from target ball to pocket
+                const toPocketX = pocket.x - target.x;
+                const toPocketY = pocket.y - target.y;
+                const distToPocket = Math.hypot(toPocketX, toPocketY);
+                if (distToPocket < 1) continue;
+
+                const dirX = toPocketX / distToPocket;
+                const dirY = toPocketY / distToPocket;
+
+                // Ghost ball position behind target ball
+                const ghostX = target.x - dirX * (BALL_RADIUS * 2);
+                const ghostY = target.y - dirY * (BALL_RADIUS * 2);
+
+                const toGhostX = ghostX - cue.x;
+                const toGhostY = ghostY - cue.y;
+                const distCueToGhost = Math.hypot(toGhostX, toGhostY);
+                if (distCueToGhost < 1) continue;
+
+                const shotDirX = toGhostX / distCueToGhost;
+                const shotDirY = toGhostY / distCueToGhost;
+
+                // Cut angle alignment (dot product between shot line and pocket line)
+                const cutAlignment = shotDirX * dirX + shotDirY * dirY;
+                if (cutAlignment < 0.22) continue; // Impossible acute cut
+
+                // Check line-of-sight obstructions
+                const cuePathBlocked = isPathBlocked(cue.x, cue.y, ghostX, ghostY, [0, target.id]);
+                const targetPathBlocked = isPathBlocked(target.x, target.y, pocket.x, pocket.y, [0, target.id]);
+
+                let score = cutAlignment * 120 - distToPocket * 0.08 - distCueToGhost * 0.05;
+                if (cuePathBlocked) score -= 180;
+                if (targetPathBlocked) score -= 140;
+
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestShot = {
+                        angle: Math.atan2(shotDirY, shotDirX),
+                        power: Math.min(0.88, Math.max(0.42, (distCueToGhost + distToPocket) / 720))
+                    };
+                }
+            }
+        }
+
+        // Fallback direct hit at any valid target if no pocket shot found
+        if (!bestShot && validTargets.length > 0) {
+            const t = validTargets[0];
+            bestShot = {
+                angle: Math.atan2(t.y - cue.y, t.x - cue.x),
+                power: 0.65
+            };
+        }
+
+        // Apply difficulty accuracy variance
+        let errorSpread = 0.07; // medium
+        if (settings.difficulty === 'easy') errorSpread = 0.19;
+        else if (settings.difficulty === 'hard') errorSpread = 0.014;
+
+        const noise = (Math.random() - 0.5) * errorSpread;
+        botTargetAngle = (bestShot ? bestShot.angle : 0) + noise;
+        botTargetPower = bestShot ? bestShot.power : 0.6;
+        botShootTimer = 55; // frames of visual aiming before shooting
+    }
+
+    function getValidTargetsForGroup(group) {
+        if (group === null) {
+            return balls.filter(b => !b.pocketed && b.id !== 0 && b.id !== 8);
+        }
+        const own = balls.filter(b => !b.pocketed && getBallGroup(b.id) === group);
+        if (own.length > 0) return own;
+        return balls.filter(b => !b.pocketed && b.id === 8);
+    }
+
+    function isPathBlocked(x1, y1, x2, y2, ignoreIds) {
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const len = Math.hypot(dx, dy);
+        if (len < 1) return false;
+        const ux = dx / len;
+        const uy = dy / len;
+
+        for (const b of balls) {
+            if (b.pocketed || ignoreIds.includes(b.id)) continue;
+            const px = b.x - x1;
+            const py = b.y - y1;
+            const proj = px * ux + py * uy;
+            if (proj > 0 && proj < len) {
+                const perp = Math.abs(px * uy - py * ux);
+                if (perp < BALL_RADIUS * 2.05) return true;
+            }
+        }
+        return false;
+    }
+
+    // --- RAYCAST AIMING GUIDE ---
+    function calculateAimPreview(startX, startY, angle) {
+        const dx = Math.cos(angle);
+        const dy = Math.sin(angle);
+        let minT = 1400;
+        let hitBall = null;
+
+        // Check cushion intersection
+        if (dx > 0) minT = Math.min(minT, (PLAY_RIGHT - BALL_RADIUS - startX) / dx);
+        else if (dx < 0) minT = Math.min(minT, (PLAY_LEFT + BALL_RADIUS - startX) / dx);
+
+        if (dy > 0) minT = Math.min(minT, (PLAY_BOTTOM - BALL_RADIUS - startY) / dy);
+        else if (dy < 0) minT = Math.min(minT, (PLAY_TOP + BALL_RADIUS - startY) / dy);
+
+        // Check ray-circle intersection against all active object balls
+        const rSum = BALL_RADIUS * 2;
+        for (const b of balls) {
+            if (b.pocketed || b.id === 0) continue;
+            const fx = startX - b.x;
+            const fy = startY - b.y;
+            const bCoef = 2 * (fx * dx + fy * dy);
+            const cCoef = fx * fx + fy * fy - rSum * rSum;
+            const disc = bCoef * bCoef - 4 * cCoef;
+
+            if (disc >= 0) {
+                const t = (-bCoef - Math.sqrt(disc)) / 2;
+                if (t > 0 && t < minT) {
+                    minT = t;
+                    hitBall = b;
+                }
+            }
+        }
+
+        const ghostX = startX + dx * minT;
+        const ghostY = startY + dy * minT;
+        let targetDir = null;
+
+        if (hitBall) {
+            const tx = hitBall.x - ghostX;
+            const ty = hitBall.y - ghostY;
+            const tLen = Math.hypot(tx, ty);
+            if (tLen > 0.01) {
+                targetDir = { x: tx / tLen, y: ty / tLen };
+            }
+        }
+
+        return { ghostX, ghostY, hitBall, targetDir };
+    }
+
+    // --- RENDERING ENGINE ---
+    function drawTable() {
+        ctx.clearRect(0, 0, LOGICAL_W, LOGICAL_H);
+
+        // 1. Outer Dark Wood Rim & Bevel
+        const woodGrad = ctx.createLinearGradient(0, 0, 0, LOGICAL_H);
+        woodGrad.addColorStop(0, '#7c431d');
+        woodGrad.addColorStop(0.5, '#592b0e');
+        woodGrad.addColorStop(1, '#3d1b06');
+
+        roundRect(ctx, 2, 2, LOGICAL_W - 4, LOGICAL_H - 4, 24);
+        ctx.fillStyle = woodGrad;
+        ctx.fill();
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = '#1e0c02';
+        ctx.stroke();
+
+        // Inner wood rail sheen
+        roundRect(ctx, 10, 10, LOGICAL_W - 20, LOGICAL_H - 20, 18);
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = 'rgba(255, 205, 145, 0.25)';
+        ctx.stroke();
+
+        // 2. Green Felt Surface
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(RAIL_WIDTH, RAIL_WIDTH, LOGICAL_W - RAIL_WIDTH * 2, LOGICAL_H - RAIL_WIDTH * 2);
+        ctx.clip();
+
+        if (feltPatternCanvas) {
+            const pat = ctx.createPattern(feltPatternCanvas, 'repeat');
+            ctx.fillStyle = pat;
+        } else {
+            ctx.fillStyle = '#588227';
+        }
+        ctx.fillRect(RAIL_WIDTH, RAIL_WIDTH, LOGICAL_W - RAIL_WIDTH * 2, LOGICAL_H - RAIL_WIDTH * 2);
+
+        // Overhead table spotlight glow
+        const spotGrad = ctx.createRadialGradient(
+            LOGICAL_W / 2, LOGICAL_H / 2, 40,
+            LOGICAL_W / 2, LOGICAL_H / 2, LOGICAL_W * 0.56
+        );
+        spotGrad.addColorStop(0, 'rgba(165, 215, 85, 0.24)');
+        spotGrad.addColorStop(0.7, 'rgba(88, 130, 39, 0.05)');
+        spotGrad.addColorStop(1, 'rgba(20, 38, 6, 0.45)');
+        ctx.fillStyle = spotGrad;
+        ctx.fillRect(RAIL_WIDTH, RAIL_WIDTH, LOGICAL_W - RAIL_WIDTH * 2, LOGICAL_H - RAIL_WIDTH * 2);
+
+        // Head String Line & Foot Spot
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.16)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(HEAD_STRING_X, PLAY_TOP);
+        ctx.lineTo(HEAD_STRING_X, PLAY_BOTTOM);
+        ctx.stroke();
+
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+        ctx.beginPath();
+        ctx.arc(HEAD_STRING_X, PLAY_TOP + PLAY_H / 2, 3, 0, Math.PI * 2);
+        ctx.arc(PLAY_LEFT + PLAY_W * 0.74, PLAY_TOP + PLAY_H / 2, 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 3. Green Rubber Cushions (6 segments)
+        drawCushions();
+        ctx.restore();
+
+        // 4. Gold/Brass Corner & Side Pocket Brackets
+        drawPocketBrackets();
+
+        // 5. Diamond Sights along wooden rails
+        drawDiamondSights();
+
+        // 6. Dark Pocket Holes
+        for (const p of pockets) {
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, POCKET_RADIUS, 0, Math.PI * 2);
+            ctx.fillStyle = '#0d0d0d';
+            ctx.fill();
+            ctx.lineWidth = 2.5;
+            ctx.strokeStyle = 'rgba(0,0,0,0.75)';
+            ctx.stroke();
+        }
+    }
+
+    function drawCushions() {
+        const midX = (PLAY_LEFT + PLAY_RIGHT) / 2;
+        const cornerGap = 32;
+        const sideGap = 25;
+
+        const segments = [
+            // Top Left & Top Right
+            [
+                { x: PLAY_LEFT + cornerGap - 14, y: RAIL_WIDTH },
+                { x: midX - sideGap + 8, y: RAIL_WIDTH },
+                { x: midX - sideGap, y: PLAY_TOP },
+                { x: PLAY_LEFT + cornerGap, y: PLAY_TOP }
+            ],
+            [
+                { x: midX + sideGap - 8, y: RAIL_WIDTH },
+                { x: PLAY_RIGHT - cornerGap + 14, y: RAIL_WIDTH },
+                { x: PLAY_RIGHT - cornerGap, y: PLAY_TOP },
+                { x: midX + sideGap, y: PLAY_TOP }
+            ],
+            // Bottom Left & Bottom Right
+            [
+                { x: PLAY_LEFT + cornerGap, y: PLAY_BOTTOM },
+                { x: midX - sideGap, y: PLAY_BOTTOM },
+                { x: midX - sideGap + 8, y: LOGICAL_H - RAIL_WIDTH },
+                { x: PLAY_LEFT + cornerGap - 14, y: LOGICAL_H - RAIL_WIDTH }
+            ],
+            [
+                { x: midX + sideGap, y: PLAY_BOTTOM },
+                { x: PLAY_RIGHT - cornerGap, y: PLAY_BOTTOM },
+                { x: PLAY_RIGHT - cornerGap + 14, y: LOGICAL_H - RAIL_WIDTH },
+                { x: midX + sideGap - 8, y: LOGICAL_H - RAIL_WIDTH }
+            ],
+            // Left & Right Rails
+            [
+                { x: RAIL_WIDTH, y: PLAY_TOP + cornerGap - 14 },
+                { x: PLAY_LEFT, y: PLAY_TOP + cornerGap },
+                { x: PLAY_LEFT, y: PLAY_BOTTOM - cornerGap },
+                { x: RAIL_WIDTH, y: PLAY_BOTTOM - cornerGap + 14 }
+            ],
+            [
+                { x: PLAY_RIGHT, y: PLAY_TOP + cornerGap },
+                { x: LOGICAL_W - RAIL_WIDTH, y: PLAY_TOP + cornerGap - 14 },
+                { x: LOGICAL_W - RAIL_WIDTH, y: PLAY_BOTTOM - cornerGap + 14 },
+                { x: PLAY_RIGHT, y: PLAY_BOTTOM - cornerGap }
+            ]
+        ];
+
+        for (const seg of segments) {
+            ctx.beginPath();
+            ctx.moveTo(seg[0].x, seg[0].y);
+            for (let i = 1; i < seg.length; i++) ctx.lineTo(seg[i].x, seg[i].y);
+            ctx.closePath();
+            ctx.fillStyle = '#3f6e18';
+            ctx.fill();
+            ctx.lineWidth = 1.5;
+            ctx.strokeStyle = '#26470b';
+            ctx.stroke();
+        }
+    }
+
+    function drawPocketBrackets() {
+        const brassGrad = ctx.createLinearGradient(0, 0, 80, 80);
+        brassGrad.addColorStop(0, '#f6d388');
+        brassGrad.addColorStop(0.5, '#c48335');
+        brassGrad.addColorStop(1, '#7a4612');
+
+        ctx.fillStyle = brassGrad;
+        ctx.strokeStyle = '#2d1504';
+        ctx.lineWidth = 2;
+
+        // 4 Corner Brass Plates
+        const corners = [
+            { x: 6, y: 6, rx: 1, ry: 1 },
+            { x: LOGICAL_W - 6, y: 6, rx: -1, ry: 1 },
+            { x: 6, y: LOGICAL_H - 6, rx: 1, ry: -1 },
+            { x: LOGICAL_W - 6, y: LOGICAL_H - 6, rx: -1, ry: -1 }
+        ];
+
+        for (const c of corners) {
+            ctx.save();
+            ctx.translate(c.x, c.y);
+            ctx.scale(c.rx, c.ry);
+            ctx.beginPath();
+            ctx.moveTo(0, 18);
+            ctx.quadraticCurveTo(0, 0, 18, 0);
+            ctx.lineTo(76, 0);
+            ctx.lineTo(76, RAIL_WIDTH - 4);
+            ctx.lineTo(RAIL_WIDTH - 4, RAIL_WIDTH - 4);
+            ctx.lineTo(RAIL_WIDTH - 4, 76);
+            ctx.lineTo(0, 76);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        // 2 Side Brass Plates (Top Center & Bottom Center)
+        const midX = LOGICAL_W / 2;
+        const sidePlates = [
+            { x: midX - 42, y: 6, h: RAIL_WIDTH - 4 },
+            { x: midX - 42, y: LOGICAL_H - RAIL_WIDTH - 2, h: RAIL_WIDTH - 4 }
+        ];
+
+        for (const sp of sidePlates) {
+            ctx.beginPath();
+            roundRect(ctx, sp.x, sp.y, 84, sp.h, 6);
+            ctx.fill();
+            ctx.stroke();
+        }
+    }
+
+    function drawDiamondSights() {
+        const midX = (PLAY_LEFT + PLAY_RIGHT) / 2;
+        const quarterW = PLAY_W / 8;
+        const quarterH = PLAY_H / 4;
+
+        const diamonds = [];
+        // Top & Bottom rail sights (3 per side)
+        for (let i = 1; i <= 3; i++) {
+            diamonds.push({ x: PLAY_LEFT + quarterW * i, y: RAIL_WIDTH / 2 });
+            diamonds.push({ x: midX + quarterW * i, y: RAIL_WIDTH / 2 });
+            diamonds.push({ x: PLAY_LEFT + quarterW * i, y: LOGICAL_H - RAIL_WIDTH / 2 });
+            diamonds.push({ x: midX + quarterW * i, y: LOGICAL_H - RAIL_WIDTH / 2 });
+        }
+        // Left & Right rail sights (3 each)
+        for (let i = 1; i <= 3; i++) {
+            diamonds.push({ x: RAIL_WIDTH / 2, y: PLAY_TOP + quarterH * i });
+            diamonds.push({ x: LOGICAL_W - RAIL_WIDTH / 2, y: PLAY_TOP + quarterH * i });
+        }
+
+        ctx.fillStyle = '#f3d5a5';
+        ctx.strokeStyle = '#3b1e08';
+        ctx.lineWidth = 1;
+
+        for (const d of diamonds) {
+            ctx.save();
+            ctx.translate(d.x, d.y);
+            ctx.rotate(Math.PI / 4);
+            ctx.fillRect(-4, -4, 8, 8);
+            ctx.strokeRect(-4, -4, 8, 8);
+            ctx.restore();
+        }
+    }
+
+    function drawBalls() {
+        // Draw object balls first, cue ball last
+        for (const b of balls) {
+            if (b.pocketed) continue;
+
+            // Ground drop shadow
+            ctx.beginPath();
+            ctx.arc(b.x + 3.5, b.y + 4.5, BALL_RADIUS, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.36)';
+            ctx.fill();
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(b.x, b.y, BALL_RADIUS, 0, Math.PI * 2);
+            ctx.clip();
+
+            const baseColor = BALL_COLORS[b.id];
+
+            if (b.id === 0) {
+                // White Cue Ball
+                ctx.fillStyle = '#f8f8f8';
+                ctx.fillRect(b.x - BALL_RADIUS, b.y - BALL_RADIUS, BALL_RADIUS * 2, BALL_RADIUS * 2);
+            } else if (isStripe(b.id)) {
+                // Striped Ball
+                ctx.fillStyle = '#fafafa';
+                ctx.fillRect(b.x - BALL_RADIUS, b.y - BALL_RADIUS, BALL_RADIUS * 2, BALL_RADIUS * 2);
+                ctx.fillStyle = baseColor;
+                ctx.fillRect(b.x - BALL_RADIUS, b.y - BALL_RADIUS * 0.56, BALL_RADIUS * 2, BALL_RADIUS * 1.12);
+            } else {
+                // Solid Ball (1-8)
+                ctx.fillStyle = baseColor;
+                ctx.fillRect(b.x - BALL_RADIUS, b.y - BALL_RADIUS, BALL_RADIUS * 2, BALL_RADIUS * 2);
+            }
+
+            // Number circle badge (for balls 1-15)
+            if (b.id !== 0) {
+                ctx.beginPath();
+                ctx.arc(b.x, b.y, BALL_RADIUS * 0.48, 0, Math.PI * 2);
+                ctx.fillStyle = '#ffffff';
+                ctx.fill();
+
+                ctx.fillStyle = '#111111';
+                ctx.font = '800 9.5px Montserrat, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(b.id.toString(), b.x, b.y + 0.5);
+            }
+
+            // 3D Spherical Shading & Specular Highlight
+            const sphereGrad = ctx.createRadialGradient(
+                b.x - BALL_RADIUS * 0.35, b.y - BALL_RADIUS * 0.35, 1,
+                b.x, b.y, BALL_RADIUS
+            );
+            sphereGrad.addColorStop(0, 'rgba(255, 255, 255, 0.55)');
+            sphereGrad.addColorStop(0.35, 'rgba(255, 255, 255, 0.05)');
+            sphereGrad.addColorStop(0.8, 'rgba(0, 0, 0, 0.12)');
+            sphereGrad.addColorStop(1, 'rgba(0, 0, 0, 0.45)');
+
+            ctx.fillStyle = sphereGrad;
+            ctx.fillRect(b.x - BALL_RADIUS, b.y - BALL_RADIUS, BALL_RADIUS * 2, BALL_RADIUS * 2);
+
+            ctx.restore();
+        }
+    }
+
+    function drawAimAndCue() {
+        if (isSimulating || gameOver) return;
+        const cue = getCueBall();
+        if (cue.pocketed) return;
+
+        // Ball-in-hand placement ring indicator
+        if (ballInHand && isHumanTurn()) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(cue.x, cue.y, BALL_RADIUS + 8, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(255, 235, 59, 0.85)';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 4]);
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        // Aiming ring around cue ball (matching screenshot diamond reticle)
+        if (isHumanTurn()) {
+            ctx.save();
+            ctx.translate(cue.x, cue.y);
+            ctx.beginPath();
+            ctx.arc(0, 0, BALL_RADIUS + 7, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            // 4 small directional triangles around cue ball
+            for (let i = 0; i < 4; i++) {
+                ctx.rotate(Math.PI / 2);
+                ctx.beginPath();
+                ctx.moveTo(0, -BALL_RADIUS - 13);
+                ctx.lineTo(-4, -BALL_RADIUS - 8);
+                ctx.lineTo(4, -BALL_RADIUS - 8);
+                ctx.closePath();
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+                ctx.fill();
+            }
+            ctx.restore();
+        }
+
+        // Aiming Guideline & Ghost Ball Preview
+        if (settings.showGuide && (isHumanTurn() || botThinking)) {
+            const preview = calculateAimPreview(cue.x, cue.y, aimAngle);
+
+            ctx.save();
+            // Main trajectory line
+            ctx.beginPath();
+            ctx.moveTo(cue.x + Math.cos(aimAngle) * (BALL_RADIUS + 4), cue.y + Math.sin(aimAngle) * (BALL_RADIUS + 4));
+            ctx.lineTo(preview.ghostX, preview.ghostY);
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+            ctx.lineWidth = 1.4;
+            ctx.stroke();
+
+            // Ghost ball circle
+            ctx.beginPath();
+            ctx.arc(preview.ghostX, preview.ghostY, BALL_RADIUS, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.72)';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            // Target ball deflection line
+            if (preview.targetDir && preview.hitBall) {
+                const isIllegal = isIllegalTarget(preview.hitBall);
+                ctx.beginPath();
+                ctx.moveTo(preview.hitBall.x, preview.hitBall.y);
+                ctx.lineTo(
+                    preview.hitBall.x + preview.targetDir.x * 52,
+                    preview.hitBall.y + preview.targetDir.y * 52
+                );
+                ctx.strokeStyle = isIllegal ? 'rgba(255, 82, 82, 0.9)' : 'rgba(255, 255, 255, 0.8)';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                if (isIllegal) {
+                    ctx.beginPath();
+                    ctx.arc(preview.hitBall.x, preview.hitBall.y, BALL_RADIUS + 3, 0, Math.PI * 2);
+                    ctx.strokeStyle = 'rgba(255, 82, 82, 0.85)';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+            }
+            ctx.restore();
+        }
+
+        // Wooden Cue Stick
+        const pullback = 18 + shotPower * 95;
+        const cueLength = 310;
+
+        ctx.save();
+        ctx.translate(cue.x, cue.y);
+        ctx.rotate(aimAngle + Math.PI); // Extend behind cue ball
+
+        // Cue shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+        ctx.beginPath();
+        ctx.moveTo(pullback, 6);
+        ctx.lineTo(pullback + cueLength, 10);
+        ctx.lineTo(pullback + cueLength, 15);
+        ctx.lineTo(pullback, 9);
+        ctx.closePath();
+        ctx.fill();
+
+        // Blue Chalk Tip
+        ctx.fillStyle = '#2980b9';
+        ctx.fillRect(pullback, -2.5, 5, 5);
+
+        // White Ferrule
+        ctx.fillStyle = '#ecf0f1';
+        ctx.fillRect(pullback + 5, -2.6, 8, 5.2);
+
+        // Maple Shaft (light wood)
+        const shaftGrad = ctx.createLinearGradient(0, -3, 0, 3);
+        shaftGrad.addColorStop(0, '#f5d6a7');
+        shaftGrad.addColorStop(0.5, '#d8a464');
+        shaftGrad.addColorStop(1, '#9e6b32');
+
+        ctx.beginPath();
+        ctx.moveTo(pullback + 13, -2.6);
+        ctx.lineTo(pullback + 165, -4.2);
+        ctx.lineTo(pullback + 165, 4.2);
+        ctx.lineTo(pullback + 13, 2.6);
+        ctx.closePath();
+        ctx.fillStyle = shaftGrad;
+        ctx.fill();
+
+        // Dark Hardwood Butt (rich dark brown with wrap detail)
+        const buttGrad = ctx.createLinearGradient(0, -6, 0, 6);
+        buttGrad.addColorStop(0, '#5c2d10');
+        buttGrad.addColorStop(0.45, '#2b1305');
+        buttGrad.addColorStop(1, '#120701');
+
+        ctx.beginPath();
+        ctx.moveTo(pullback + 165, -4.2);
+        ctx.lineTo(pullback + cueLength, -6.2);
+        ctx.lineTo(pullback + cueLength, 6.2);
+        ctx.lineTo(pullback + 165, 4.2);
+        ctx.closePath();
+        ctx.fillStyle = buttGrad;
+        ctx.fill();
+
+        // Gold decorative ring & rubber bumper
+        ctx.fillStyle = '#e6b85c';
+        ctx.fillRect(pullback + 165, -4.3, 4, 8.6);
+        ctx.fillStyle = '#111';
+        ctx.fillRect(pullback + cueLength, -5.8, 6, 11.6);
+
+        ctx.restore();
+    }
+
+    function isIllegalTarget(ball) {
+        if (isBreakShot || !isHumanTurn()) return false;
+        const activeGroup = turn === 1 ? playerGroup : botGroup;
+        if (activeGroup === null) return false;
+        const ownRemaining = balls.filter(b => !b.pocketed && getBallGroup(b.id) === activeGroup).length;
+        if (ownRemaining > 0) {
+            return getBallGroup(ball.id) !== activeGroup;
+        }
+        return ball.id !== 8;
+    }
+
+    function isMyOnlineTurn() {
+        return (isOnlineHost && turn === 1) || (!isOnlineHost && turn === 2);
+    }
+
+    function isHumanTurn() {
+        if (settings.gameMode === 'online') {
+            return onlineRoomActive && isMyOnlineTurn();
+        }
+        return turn === 1 || settings.gameMode === '2p';
+    }
+
+    function roundRect(ctx, x, y, width, height, radius) {
+        ctx.beginPath();
+        ctx.moveTo(x + radius, y);
+        ctx.lineTo(x + width - radius, y);
+        ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+        ctx.lineTo(x + width, y + height - radius);
+        ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+        ctx.lineTo(x + radius, y + height);
+        ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+        ctx.lineTo(x, y + radius);
+        ctx.quadraticCurveTo(x, y, x + radius, y);
+        ctx.closePath();
+    }
+
+    // --- RESPONSIVE CANVAS SIZING ---
+    function resizeCanvas() {
+        const rect = canvasWrap.getBoundingClientRect();
+        const aspect = LOGICAL_W / LOGICAL_H;
+        let w = rect.width;
+        let h = rect.height;
+
+        if (w / h > aspect) {
+            w = h * aspect;
+        } else {
+            h = w / aspect;
+        }
+
+        const dpr = window.devicePixelRatio || 1;
+        canvas.style.width = `${Math.floor(w)}px`;
+        canvas.style.height = `${Math.floor(h)}px`;
+        canvas.width = Math.floor(LOGICAL_W * dpr);
+        canvas.height = Math.floor(LOGICAL_H * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    function screenToLogical(clientX, clientY) {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = LOGICAL_W / rect.width;
+        const scaleY = LOGICAL_H / rect.height;
+        return {
+            x: (clientX - rect.left) * scaleX,
+            y: (clientY - rect.top) * scaleY
+        };
+    }
+
+    // --- INPUT HANDLERS (MOUSE & TOUCH) ---
+    function onCanvasPointerDown(e) {
+        if (!gameStarted || gameOver || isSimulating || !isHumanTurn()) return;
+        initAudio();
+        const pt = e.touches ? e.touches[0] : e;
+        const pos = screenToLogical(pt.clientX, pt.clientY);
+        const cue = getCueBall();
+
+        // Check if dragging cue ball during Ball-In-Hand
+        if (ballInHand && Math.hypot(pos.x - cue.x, pos.y - cue.y) < BALL_RADIUS * 2.5) {
+            isDraggingAim = 'moveBall';
+            return;
+        }
+
+        // Check if grabbing behind the cue ball to pull back & shoot, or aiming around table
+        const distToCue = Math.hypot(pos.x - cue.x, pos.y - cue.y);
+        const angleToClick = Math.atan2(pos.y - cue.y, pos.x - cue.x);
+        const angleDiff = Math.abs(normalizeAngle(angleToClick - (aimAngle + Math.PI)));
+
+        if (distToCue > BALL_RADIUS * 1.4 && distToCue < 240 && angleDiff < 0.45) {
+            isPullingShot = true;
+            pullStartPos = pos;
+        } else {
+            isDraggingAim = 'aim';
+            aimAngle = Math.atan2(pos.y - cue.y, pos.x - cue.x);
+        }
+    }
+
+    function onCanvasPointerMove(e) {
+        if (!gameStarted || gameOver || isSimulating || !isHumanTurn()) return;
+        const pt = e.touches ? e.touches[0] : e;
+        const pos = screenToLogical(pt.clientX, pt.clientY);
+        const cue = getCueBall();
+
+        if (isDraggingAim === 'moveBall') {
+            const clampedX = Math.max(PLAY_LEFT + BALL_RADIUS, Math.min(PLAY_RIGHT - BALL_RADIUS, pos.x));
+            const clampedY = Math.max(PLAY_TOP + BALL_RADIUS, Math.min(PLAY_BOTTOM - BALL_RADIUS, pos.y));
+            const overlap = balls.some(b => b.id !== 0 && !b.pocketed && Math.hypot(b.x - clampedX, b.y - clampedY) < BALL_RADIUS * 2.05);
+            if (!overlap) {
+                cue.x = clampedX;
+                cue.y = clampedY;
+                if (settings.gameMode === 'online' && onlineRoomActive) {
+                    sendOnlinePacket({ type: 'moveCue', x: cue.x, y: cue.y });
+                }
+            }
+            return;
+        }
+
+        if (isPullingShot) {
+            const backDirX = -Math.cos(aimAngle);
+            const backDirY = -Math.sin(aimAngle);
+            const dx = pos.x - pullStartPos.x;
+            const dy = pos.y - pullStartPos.y;
+            const pullDist = dx * backDirX + dy * backDirY;
+            shotPower = Math.max(0, Math.min(1, pullDist / 130));
+            updatePowerUI();
+            if (settings.gameMode === 'online' && onlineRoomActive) {
+                sendOnlinePacket({ type: 'aim', angle: aimAngle, power: shotPower });
+            }
+            return;
+        }
+
+        if (isDraggingAim === 'aim') {
+            aimAngle = Math.atan2(pos.y - cue.y, pos.x - cue.x);
+            if (settings.gameMode === 'online' && onlineRoomActive) {
+                sendOnlinePacket({ type: 'aim', angle: aimAngle, power: shotPower });
+            }
+        }
+    }
+
+    function onCanvasPointerUp() {
+        if (isPullingShot) {
+            isPullingShot = false;
+            if (shotPower >= 0.05) {
+                shootCueBall(aimAngle, shotPower, spinOffset);
+            } else {
+                shotPower = 0;
+                updatePowerUI();
+            }
+        }
+        isDraggingAim = false;
+    }
+
+    function normalizeAngle(a) {
+        while (a > Math.PI) a -= Math.PI * 2;
+        while (a < -Math.PI) a += Math.PI * 2;
+        return a;
+    }
+
+    // Power Meter Drag Controls
+    function handlePowerBarDrag(clientY) {
+        if (!gameStarted || gameOver || isSimulating || !isHumanTurn()) return;
+        const rect = powerMeter.getBoundingClientRect();
+        const relY = clientY - rect.top;
+        shotPower = Math.max(0, Math.min(1, (relY - 10) / (rect.height - 20)));
+        updatePowerUI();
+    }
+
+    powerMeter.addEventListener('mousedown', (e) => {
+        if (!isHumanTurn() || isSimulating) return;
+        initAudio();
+        isDraggingPowerBar = true;
+        handlePowerBarDrag(e.clientY);
+    });
+
+    powerMeter.addEventListener('touchstart', (e) => {
+        if (!isHumanTurn() || isSimulating) return;
+        initAudio();
+        isDraggingPowerBar = true;
+        handlePowerBarDrag(e.touches[0].clientY);
+    }, { passive: true });
+
+    window.addEventListener('mousemove', (e) => {
+        if (isDraggingPowerBar) handlePowerBarDrag(e.clientY);
+        else onCanvasPointerMove(e);
+    });
+
+    window.addEventListener('touchmove', (e) => {
+        if (isDraggingPowerBar) handlePowerBarDrag(e.touches[0].clientY);
+        else onCanvasPointerMove(e);
+    }, { passive: true });
+
+    window.addEventListener('mouseup', () => {
+        if (isDraggingPowerBar) {
+            isDraggingPowerBar = false;
+            if (shotPower >= 0.05) shootCueBall(aimAngle, shotPower, spinOffset);
+            else { shotPower = 0; updatePowerUI(); }
+        }
+        onCanvasPointerUp();
+    });
+
+    window.addEventListener('touchend', () => {
+        if (isDraggingPowerBar) {
+            isDraggingPowerBar = false;
+            if (shotPower >= 0.05) shootCueBall(aimAngle, shotPower, spinOffset);
+            else { shotPower = 0; updatePowerUI(); }
+        }
+        onCanvasPointerUp();
+    });
+
+    canvas.addEventListener('mousedown', onCanvasPointerDown);
+    canvas.addEventListener('touchstart', onCanvasPointerDown, { passive: true });
+
+    // Spin Selector Widget
+    function updateSpinFromPointer(clientX, clientY) {
+        const rect = spinWidget.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        const maxR = rect.width * 0.34;
+        let dx = clientX - cx;
+        let dy = clientY - cy;
+        const dist = Math.hypot(dx, dy);
+        if (dist > maxR) {
+            dx = (dx / dist) * maxR;
+            dy = (dy / dist) * maxR;
+        }
+        spinOffset.x = dx / maxR;
+        spinOffset.y = dy / maxR;
+        spinDot.style.left = (50 + spinOffset.x * 34) + '%';
+        spinDot.style.top = (50 + spinOffset.y * 34) + '%';
+    }
+
+    let draggingSpin = false;
+    spinWidget.addEventListener('mousedown', (e) => { draggingSpin = true; updateSpinFromPointer(e.clientX, e.clientY); });
+    spinWidget.addEventListener('touchstart', (e) => { draggingSpin = true; updateSpinFromPointer(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
+    window.addEventListener('mousemove', (e) => { if (draggingSpin) updateSpinFromPointer(e.clientX, e.clientY); });
+    window.addEventListener('touchmove', (e) => { if (draggingSpin) updateSpinFromPointer(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
+    window.addEventListener('mouseup', () => { draggingSpin = false; });
+    window.addEventListener('touchend', () => { draggingSpin = false; });
+
+    // --- MENU & SETTINGS CONTROLS ---
+    langBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            settings.lang = btn.dataset.lang;
+            applyTranslations();
+            if (!shopModal.classList.contains('hidden')) {
+                renderShopGrid();
+            }
+        });
+    });
+
+    // Make sure all language buttons (including account modal) correctly trigger applyTranslations
+    document.querySelectorAll('.lang-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            settings.lang = btn.dataset.lang;
+            applyTranslations();
+        });
+    });
+
+    // Account Modal Events
+    saveAccountBtn.addEventListener('click', () => {
+        initAudio();
+        const uname = inputUsername.value.trim();
+        const pass = inputPassword.value.trim();
+
+        if (!uname || !pass) {
+            authError.textContent = t('accErrEmpty');
+            return;
+        }
+
+        const key = uname.toLowerCase();
+        if (registeredAccounts[key]) {
+            if (registeredAccounts[key].password !== pass) {
+                authError.textContent = t('accErrWrongPass');
+                return;
+            }
+            // Load existing account
+            const acc = registeredAccounts[key];
+            playerProfile = {
+                username: acc.username,
+                isGuest: false,
+                coins: acc.coins,
+                ownedAvatars: [...acc.ownedAvatars],
+                equippedAvatar: acc.equippedAvatar
+            };
+        } else {
+            // Register new account
+            registeredAccounts[key] = {
+                username: uname,
+                password: pass,
+                coins: playerProfile.coins,
+                ownedAvatars: [...playerProfile.ownedAvatars],
+                equippedAvatar: playerProfile.equippedAvatar
+            };
+            playerProfile.username = uname;
+            playerProfile.isGuest = false;
+        }
+
+        authError.textContent = '';
+        syncAccountData();
+        applyTranslations();
+        accountModal.classList.add('hidden');
+        mainModal.classList.remove('hidden');
+    });
+
+    guestBtn.addEventListener('click', () => {
+        initAudio();
+        authError.textContent = '';
+        syncAccountData();
+        applyTranslations();
+        accountModal.classList.add('hidden');
+        mainModal.classList.remove('hidden');
+    });
+
+    menuAccountBtn.addEventListener('click', () => {
+        authError.textContent = '';
+        inputUsername.value = playerProfile.username || '';
+        mainModal.classList.add('hidden');
+        accountModal.classList.remove('hidden');
+    });
+
+    // Shop Modal Events
+    function openShop() {
+        initAudio();
+        shopFeedback.textContent = '';
+        renderShopGrid();
+        shopModal.classList.remove('hidden');
+    }
+
+    openShopBtn.addEventListener('click', openShop);
+    menuShopBtn.addEventListener('click', openShop);
+    closeShopBtn.addEventListener('click', () => {
+        shopModal.classList.add('hidden');
+    });
+
+    // Rules Modal Events
+    function openRules() {
+        initAudio();
+        applyTranslations();
+        rulesModal.classList.remove('hidden');
+    }
+    openRulesBtn.addEventListener('click', openRules);
+    menuRulesBtn.addEventListener('click', openRules);
+    closeRulesBtn.addEventListener('click', () => {
+        rulesModal.classList.add('hidden');
+    });
+
+    // Online Room Modal Events
+    function openOnlineModal() {
+        initAudio();
+        if (!generatedRoomCode) {
+            generatedRoomCode = generateRoomCode();
+            createdRoomCodeEl.textContent = generatedRoomCode;
+        }
+        createRoomStatus.textContent = '';
+        joinRoomStatus.textContent = '';
+        onlineModal.classList.remove('hidden');
+    }
+
+    menuOnlineBtn.addEventListener('click', openOnlineModal);
+    closeOnlineBtn.addEventListener('click', () => {
+        onlineModal.classList.add('hidden');
+    });
+
+    tabCreateRoom.addEventListener('click', () => {
+        tabCreateRoom.classList.add('active');
+        tabJoinRoom.classList.remove('active');
+        panelCreateRoom.classList.remove('hidden');
+        panelJoinRoom.classList.add('hidden');
+    });
+
+    tabJoinRoom.addEventListener('click', () => {
+        tabJoinRoom.classList.add('active');
+        tabCreateRoom.classList.remove('active');
+        panelJoinRoom.classList.remove('hidden');
+        panelCreateRoom.classList.add('hidden');
+    });
+
+    btnCreateRoomStart.addEventListener('click', () => {
+        initAudio();
+        const roomPass = createRoomPassInput.value.trim();
+        if (!roomPass) {
+            createRoomStatus.style.color = '#ff6b6b';
+            createRoomStatus.textContent = t('accErrEmpty');
+            return;
+        }
+        if (typeof Peer === 'undefined') {
+            createRoomStatus.style.color = '#ff6b6b';
+            createRoomStatus.textContent = 'PeerJS Offline';
+            return;
+        }
+
+        if (peerInstance) {
+            try { peerInstance.destroy(); } catch (e) {}
+        }
+
+        const peerId = 'HAMZA8BALL_' + generatedRoomCode;
+        createRoomStatus.style.color = '#81ecec';
+        createRoomStatus.textContent = t('waitingFriend');
+
+        peerInstance = new Peer(peerId);
+        peerInstance.on('connection', (conn) => {
+            conn.on('data', function authHandler(msg) {
+                if (msg && msg.type === 'auth') {
+                    if (msg.password === roomPass) {
+                        conn.send({ type: 'auth_ok' });
+                        conn.off('data', authHandler);
+                        setupPeerConnection(conn, true);
+                    } else {
+                        conn.send({ type: 'auth_fail' });
+                        setTimeout(() => conn.close(), 300);
+                    }
+                }
+            });
+        });
+        peerInstance.on('error', () => {
+            generatedRoomCode = generateRoomCode();
+            createdRoomCodeEl.textContent = generatedRoomCode;
+            createRoomStatus.style.color = '#ff6b6b';
+            createRoomStatus.textContent = t('roomNotFound');
+        });
+    });
+
+    btnJoinRoomConnect.addEventListener('click', () => {
+        initAudio();
+        const code = joinRoomCodeInput.value.trim().toUpperCase();
+        const pass = joinRoomPassInput.value.trim();
+        if (!code || !pass) {
+            joinRoomStatus.style.color = '#ff6b6b';
+            joinRoomStatus.textContent = t('accErrEmpty');
+            return;
+        }
+        if (typeof Peer === 'undefined') {
+            joinRoomStatus.style.color = '#ff6b6b';
+            joinRoomStatus.textContent = 'PeerJS Offline';
+            return;
+        }
+
+        if (peerInstance) {
+            try { peerInstance.destroy(); } catch (e) {}
+        }
+
+        joinRoomStatus.style.color = '#81ecec';
+        joinRoomStatus.textContent = t('connectingRoom');
+
+        peerInstance = new Peer();
+        peerInstance.on('open', () => {
+            const conn = peerInstance.connect('HAMZA8BALL_' + code, { reliable: true });
+            conn.on('open', () => {
+                conn.send({ type: 'auth', password: pass });
+            });
+            conn.on('data', function joinAuthHandler(msg) {
+                if (msg && msg.type === 'auth_ok') {
+                    conn.off('data', joinAuthHandler);
+                    setupPeerConnection(conn, false);
+                } else if (msg && msg.type === 'auth_fail') {
+                    joinRoomStatus.style.color = '#ff6b6b';
+                    joinRoomStatus.textContent = t('wrongRoomPass');
+                }
+            });
+            conn.on('error', () => {
+                joinRoomStatus.style.color = '#ff6b6b';
+                joinRoomStatus.textContent = t('roomNotFound');
+            });
+        });
+        peerInstance.on('error', () => {
+            joinRoomStatus.style.color = '#ff6b6b';
+            joinRoomStatus.textContent = t('roomNotFound');
+        });
+    });
+
+    modeBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (btn.dataset.mode === 'online') {
+                openOnlineModal();
+                return;
+            }
+            onlineRoomActive = false;
+            modeBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            settings.gameMode = btn.dataset.mode;
+            rowDifficulty.style.display = settings.gameMode === 'bot' ? 'flex' : 'none';
+            applyTranslations();
+        });
+    });
+
+    diffBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            diffBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            settings.difficulty = btn.dataset.diff;
+            applyTranslations();
+        });
+    });
+
+    toggleGuideBtn.addEventListener('click', () => {
+        settings.showGuide = !settings.showGuide;
+        toggleGuideBtn.className = 'toggle-btn ' + (settings.showGuide ? 'toggle-on' : 'toggle-off');
+        applyTranslations();
+    });
+
+    toggleSoundBtn.addEventListener('click', () => {
+        settings.sound = !settings.sound;
+        toggleSoundBtn.className = 'toggle-btn ' + (settings.sound ? 'toggle-on' : 'toggle-off');
+        if (settings.sound) initAudio();
+        applyTranslations();
+    });
+
+    playBtn.addEventListener('click', () => {
+        initAudio();
+        mainModal.classList.add('hidden');
+        if (!gameStarted) {
+            gameStarted = true;
+            initRack();
+        }
+    });
+
+    restartBtn.addEventListener('click', () => {
+        initAudio();
+        mainModal.classList.add('hidden');
+        gameStarted = true;
+        initRack();
+    });
+
+    menuBtn.addEventListener('click', () => {
+        if (!gameOver) {
+            modalContext = 'pause';
+            playBtn.classList.remove('hidden');
+            restartBtn.classList.remove('hidden');
+            applyTranslations();
+        }
+        mainModal.classList.remove('hidden');
+    });
+
+    // --- MAIN ANIMATION LOOP ---
+    function gameLoop() {
+        // Bot animated aiming & execution
+        if (botThinking && !isSimulating && !gameOver) {
+            const diff = normalizeAngle(botTargetAngle - aimAngle);
+            aimAngle += diff * 0.14;
+            botShootTimer--;
+
+            if (botShootTimer < 22) {
+                shotPower = Math.min(botTargetPower, shotPower + botTargetPower / 18);
+                updatePowerUI();
+            }
+
+            if (botShootTimer <= 0) {
+                botThinking = false;
+                shootCueBall(botTargetAngle, botTargetPower, { x: 0, y: 0 });
+            }
+        }
+
+        stepPhysics();
+        drawTable();
+        drawBalls();
+        drawAimAndCue();
+
+        requestAnimationFrame(gameLoop);
+    }
+
+    // --- BOOTSTRAP ---
+    window.addEventListener('resize', resizeCanvas);
+    mainModal.classList.add('hidden'); // Start on Account Login/Register screen first
+    syncAccountData();
+    buildFeltTexture();
+    applyTranslations();
+    initRack();
+    resizeCanvas();
+    requestAnimationFrame(gameLoop);
+})();
+</script>
+</body>
+</html>
